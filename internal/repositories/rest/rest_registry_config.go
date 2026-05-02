@@ -2,8 +2,6 @@ package rest
 
 import (
 	"net/http"
-
-	restcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 )
 
 var (
@@ -81,7 +79,7 @@ func (o *registryOptions) registerResponse(spec RestResponseSpec, target map[int
 	}
 }
 
-func (o *registryOptions) registerResponseEnvelope(spec restcts.RestEnvelopeSpec, statusCodes ...int) {
+func (o *registryOptions) registerResponseEnvelope(spec RestEnvelopeSpec, statusCodes ...int) {
 	if spec == nil {
 		panic(errRestRegisterResponseSpecNil)
 	}
@@ -115,7 +113,7 @@ func WithResponse(spec RestResponseSpec, statusCodes ...int) RegistryOption {
 	}
 }
 
-func WithResponseEnvelope(spec restcts.RestEnvelopeSpec, statusCodes ...int) RegistryOption {
+func WithResponseEnvelope(spec RestEnvelopeSpec, statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
 		ro.registerResponseEnvelope(spec, statusCodes...)
 	}

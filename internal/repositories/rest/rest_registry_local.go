@@ -2,8 +2,6 @@ package rest
 
 import (
 	"net/http"
-
-	restcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 )
 
 func (r *restRegistry) cloneConfig() *registryOptions {
@@ -44,7 +42,7 @@ func (r *restRegistry) resolveRequestEnvelopeSpec(name string) RestRequestSpec {
 	return nil
 }
 
-func (r *restRegistry) resolveResponseEnvelopeSpec(status int) restcts.RestEnvelopeSpec {
+func (r *restRegistry) resolveResponseEnvelopeSpec(status int) RestEnvelopeSpec {
 	if spec, ok := r.cfg.ResponseEnvelopes[status]; ok && spec != nil {
 		return spec
 	}

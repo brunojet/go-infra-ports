@@ -12,7 +12,7 @@ import (
 type foreignRegistry struct{}
 
 func (f *foreignRegistry) Merge(other RestRegistry) RestRegistry { return other }
-func (f *foreignRegistry) ResolveRequest(name string, body RestRequestSpec, requestBody *[]byte) error {
+func (f *foreignRegistry) ResolveRequest(body RestRequestSpec, requestBody *[]byte) error {
 	return nil
 }
 func (f *foreignRegistry) ResolveEnvelopeRequest(name string, dataBody *[]byte) error { return nil }
@@ -199,16 +199,16 @@ func TestMergeWithNilAndForeignRegistryReturnsClone(t *testing.T) {
 
 func TestResolveRequest_ErrorPaths(t *testing.T) {
 	registry := NewRestRegistry()
-	if err := registry.ResolveRequest(http.MethodPost, &DefaultRestRequest{}, nil); err == nil {
+	if err := registry.ResolveRequest(&DefaultRestRequest{}, nil); err == nil {
 		t.Fatal("expected error for nil request body pointer")
 	}
 
 	payload := []byte{}
-	if err := registry.ResolveRequest(http.MethodPost, nil, &payload); err == nil {
+	if err := registry.ResolveRequest(nil, &payload); err == nil {
 		t.Fatal("expected error for nil request spec")
 	}
 
-	if err := registry.ResolveRequest(http.MethodPost, &marshalFailRequest{}, &payload); err == nil {
+	if err := registry.ResolveRequest(&marshalFailRequest{}, &payload); err == nil {
 		t.Fatal("expected marshal error")
 	}
 }

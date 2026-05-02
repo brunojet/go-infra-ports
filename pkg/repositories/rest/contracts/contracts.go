@@ -50,8 +50,8 @@ type RestEnvelopeSpec interface {
 type RestRegistry interface {
 	// Merge combines the current registry with another and returns the merged result.
 	Merge(other RestRegistry) RestRegistry
-	// ResolveRequest marshals a request spec into requestBody using the provided key.
-	ResolveRequest(name string, body RestRequestSpec, requestBody *[]byte) error
+	// ResolveRequest marshals a request spec into requestBody.
+	ResolveRequest(body RestRequestSpec, requestBody *[]byte) error
 	// ResolveEnvelopeRequest envelopes the current request body in place.
 	ResolveEnvelopeRequest(name string, dataBody *[]byte) error
 	// ResolveResponse unmarshals a single response payload into body.

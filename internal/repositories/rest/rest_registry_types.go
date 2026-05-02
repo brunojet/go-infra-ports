@@ -3,7 +3,7 @@ package rest
 import (
 	"encoding/json"
 
-	restcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	"github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
@@ -13,10 +13,14 @@ const (
 )
 
 type (
-	RestRegistry     = restcts.RestRegistry
-	RestRequestSpec  = restcts.RestRequestSpec
-	RestResponseSpec = restcts.RestResponseSpec
-	RestEnvelopeSpec = restcts.RestEnvelopeSpec
+	RestRegistry     = contracts.RestRegistry
+	RestRequestSpec  = contracts.RestRequestSpec
+	RestResponseSpec = contracts.RestResponseSpec
+	RestEnvelopeSpec = contracts.RestEnvelopeSpec
+	RestRequest      = contracts.RestRequest
+	RestResponse     = contracts.RestResponse
+	RestResponses    = contracts.RestResponses
+	RestRepository   = contracts.RestRepository
 )
 
 type DefaultRestRequest struct {

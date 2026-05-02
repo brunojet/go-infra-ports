@@ -2,8 +2,7 @@
 package repositories
 
 import (
-	rest "github.com/brunojet/go-infra-ports/internal/repositories/rest"
-	restcontracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	"github.com/brunojet/go-infra-ports/internal/repositories/rest"
 )
 
 const (
@@ -14,28 +13,28 @@ const (
 )
 
 // RestRegistry aliases the public REST registry contract.
-type RestRegistry = restcontracts.RestRegistry
+type RestRegistry = rest.RestRegistry
 
 // RestRequestSpec aliases the request payload contract used by RestRegistry.
-type RestRequestSpec = restcontracts.RestRequestSpec
+type RestRequestSpec = rest.RestRequestSpec
 
 // RestResponseSpec aliases the response payload contract used by RestRegistry.
-type RestResponseSpec = restcontracts.RestResponseSpec
+type RestResponseSpec = rest.RestResponseSpec
 
 // RestEnvelopeSpec aliases the envelope payload contract used by RestRegistry.
-type RestEnvelopeSpec = restcontracts.RestEnvelopeSpec
+type RestEnvelopeSpec = rest.RestEnvelopeSpec
 
 // RestRequest aliases REST request DTO used by RestRepository ports.
-type RestRequest = restcontracts.RestRequest
+type RestRequest = rest.RestRequest
 
 // RestResponse aliases REST single response DTO used by RestRepository ports.
-type RestResponse = restcontracts.RestResponse
+type RestResponse = rest.RestResponse
 
 // RestResponses aliases REST list response DTO used by RestRepository ports.
-type RestResponses = restcontracts.RestResponses
+type RestResponses = rest.RestResponses
 
 // RestRepository aliases the outbound REST repository port contract.
-type RestRepository = restcontracts.RestRepository
+type RestRepository = rest.RestRepository
 
 // RegistryOption configures RestRegistry construction.
 type RegistryOption = rest.RegistryOption

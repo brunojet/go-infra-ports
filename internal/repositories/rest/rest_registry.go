@@ -28,8 +28,7 @@ func (r *restRegistry) Merge(other RestRegistry) RestRegistry {
 	return merged
 }
 
-func (r *restRegistry) ResolveRequest(name string, body RestRequestSpec, requestBody *[]byte) error {
-	_ = name
+func (r *restRegistry) ResolveRequest(body RestRequestSpec, requestBody *[]byte) error {
 	if requestBody == nil {
 		return errRestResolveRequestBodyNil
 	}
