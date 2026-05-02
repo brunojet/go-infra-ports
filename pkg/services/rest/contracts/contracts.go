@@ -28,7 +28,7 @@ type RestUpstreamMapper[C, U any] interface {
 
 // RestDownstreamMapper maps upstream responses into downstream response contracts.
 type RestDownstreamMapper[R any] interface {
-	ToDownstreamStatusCode(statusCode int, downstreamtatusCode *int) error
+	ToDownstreamStatusCode(statusCode int, downstreamStatusCode *int) error
 	ToDownstreamHeaders(upsHeader http.Header, downstreamHeader *http.Header) error
 	ToDownstreamResponse(upsPayload any, payload *R) error
 	ToDownstreamInformation(statusCode int, upsPayload any, serviceMeta *ServiceMeta) error
