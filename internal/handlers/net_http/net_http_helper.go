@@ -49,8 +49,9 @@ func chainMiddlewares(next http.Handler, middlewares ...Middleware) http.Handler
 	return wrapped
 }
 
-// validateParams valida os path params da routeEntry contra seus regexes e retorna
-// um mapa com os valores extraídos. Escreve 400 e retorna (nil, false) se algum param for inválido.
+// validateParams valida os path params da routeEntry contra seus regexes e
+// armazena os valores extraídos em ctx.Identifiers. Escreve 400 e retorna
+// false se algum param for inválido.
 func validateParams(w http.ResponseWriter, r *http.Request, entry *routeEntry, ctx *types.RequestContext) bool {
 	if entry == nil || len(entry.params) == 0 {
 		return true
