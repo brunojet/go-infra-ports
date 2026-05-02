@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/brunojet/go-infra-ports/compare/v1.0.1...v1.0.2) (2026-05-02)
+
+
+### Bug Fixes
+
+* **types:** remove obsolete http type file ([9691c20](https://github.com/brunojet/go-infra-ports/commit/9691c206e3a0c38a126b04c2232a0193d019b29f))
+
 ## [1.0.1](https://github.com/brunojet/go-infra-ports/compare/v1.0.0...v1.0.1) (2026-05-02)
 
 
