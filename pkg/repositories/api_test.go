@@ -1,26 +1,104 @@
 package repositories
 
-import "testing"
+import (
+	"encoding/json"
+	"net/http"
+	"testing"
 
-func TestRepositoryAliases_AreUsable(t *testing.T) {
-	create := RepositoryCreate[string]{Body: "a"}
-	update := RepositoryUpdate[string]{Body: "b"}
-	save := RepositorySave[string]{Body: "c"}
-	resp := RepositoryResponse[string]{Data: "x"}
-	resps := RepositoryResponses[string]{Data: []string{"x", "y"}}
-	rc := RestCreate[string]{Body: "a"}
-	ru := RestUpdate[string]{Body: "b"}
-	rs := RestSave[string]{Body: "c"}
-	rr := RestResponse[string]{Data: "x"}
-	rrs := RestResponses[string]{Data: []string{"x", "y"}}
+	restcontracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	"github.com/brunojet/go-infra-ports/pkg/types"
+)
 
-	if create.Body != "a" || update.Body != "b" || save.Body != "c" {
-		t.Fatalf("unexpected repository alias payload values")
+type testRequestSpec struct {
+	Body json.RawMessage
+}
+
+func (t *testRequestSpec) New() restcontracts.RestRequestSpec {
+	return &testRequestSpec{}
+}
+
+func (t *testRequestSpec) SetBody(body json.RawMessage) {
+	t.Body = body
+}
+
+type testResponseSpec struct {
+	Body json.RawMessage
+}
+
+func (t *testResponseSpec) New() restcontracts.RestResponseSpec {
+	return &testResponseSpec{}
+}
+
+func (t *testResponseSpec) NewSlice(n int) []restcontracts.RestResponseSpec {
+	out := make([]restcontracts.RestResponseSpec, n)
+	for i := 0; i < n; i++ {
+		out[i] = &testResponseSpec{}
 	}
-	if resp.Data != "x" || len(resps.Data) != 2 {
-		t.Fatalf("unexpected repository alias response values")
+	return out
+}
+
+func (t *testResponseSpec) UnmarshalJSON(data []byte) error {
+	t.Body = append([]byte(nil), data...)
+	return nil
+}
+
+type testEnvelopeSpec struct {
+	Data json.RawMessage
+	Meta types.ResponseMeta
+}
+
+func (t *testEnvelopeSpec) New() restcontracts.RestEnvelopeSpec {
+	return &testEnvelopeSpec{}
+}
+
+func (t *testEnvelopeSpec) EnvelopeData() json.RawMessage {
+	return t.Data
+}
+
+func (t *testEnvelopeSpec) EnvelopeMeta() types.ResponseMeta {
+	return t.Meta
+}
+
+func TestNewRestRegistry_ReturnsNonNil(t *testing.T) {
+	if got := NewRestRegistry(); got == nil {
+		t.Fatalf("expected non-nil registry")
 	}
-	if rc.Body != "a" || ru.Body != "b" || rs.Body != "c" || rr.Data != "x" || len(rrs.Data) != 2 {
-		t.Fatalf("unexpected rest alias values")
+}
+
+func TestRegistryOptions_ReturnOptions(t *testing.T) {
+	req := &testRequestSpec{}
+	resp := &testResponseSpec{}
+	env := &testEnvelopeSpec{}
+
+	opts := []RegistryOption{
+		WithRequest(req, http.MethodPost),
+		WithRequestEnvelope(req, http.MethodPost),
+		WithResponse(resp, http.StatusOK),
+		WithResponseEnvelope(env, http.StatusOK),
+		WithInformation(resp, http.StatusContinue),
+		WithRedirection(resp, http.StatusMovedPermanently),
+		WithProblem(resp, http.StatusBadRequest),
+	}
+
+	for i, opt := range opts {
+		if opt == nil {
+			t.Fatalf("expected non-nil option at index %d", i)
+		}
+	}
+}
+
+func TestAliases_AreUsable(t *testing.T) {
+	request := RestRequest{Body: &testRequestSpec{}}
+	response := RestResponse{Data: &testResponseSpec{}}
+	responses := RestResponses{Data: []RestResponseSpec{&testResponseSpec{}}}
+
+	if request.Body == nil {
+		t.Fatalf("expected request body alias to be usable")
+	}
+	if response.Data == nil {
+		t.Fatalf("expected response data alias to be usable")
+	}
+	if len(responses.Data) != 1 {
+		t.Fatalf("expected responses data alias to be usable")
 	}
 }
