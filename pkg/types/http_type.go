@@ -5,12 +5,18 @@ import (
 	"net/url"
 )
 
+// HTTPRequesOptions represents HTTP request metadata used by adapters.
 type HTTPRequesOptions struct {
+	// Header carries outbound HTTP headers.
 	Header http.Header
-	Query  url.Values
+	// Query carries outbound URL query parameters.
+	Query url.Values
 }
 
+// HTTPResponseOptions represents HTTP response metadata used by adapters.
 type HTTPResponseOptions struct {
+	// StatusCode is the HTTP status to be returned.
 	StatusCode int
-	Header     http.Header
+	// Header carries inbound or outbound HTTP headers.
+	Header http.Header
 }
