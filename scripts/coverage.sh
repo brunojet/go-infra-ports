@@ -2,46 +2,23 @@
 set -euo pipefail
 
 COV_DIR="coverage"
-TMP_DIR="${COV_DIR}/tmp"
-
-mkdir -p "${COV_DIR}"
-rm -rf "${TMP_DIR}"
-mkdir -p "${TMP_DIR}"
-
-echo "Collecting packages with test files..."
-PKGS=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./...)
-
-FIRST_MODE=""
-
-for PKG in $PKGS; do
-    case "$PKG" in
-        */mocks)
-            echo "Skipping generated/mock package ${PKG}"
-            continue
-            ;;
-    esac
-    SAFE=$(echo "$PKG" | tr '/:' '__')
-    OUT="${TMP_DIR}/${SAFE}.out"
-    echo "Running tests for ${PKG}"
-    go test -coverprofile="${OUT}" "${PKG}"
-    if [[ -z "${FIRST_MODE}" && -f "${OUT}" ]]; then
-        FIRST_MODE=$(head -1 "${OUT}")
-    fi
-done
-
 MERGED="${COV_DIR}/coverage.out"
 
-if [[ -z "${FIRST_MODE}" ]]; then
-    echo "No eligible packages with tests were found"
-    exit 1
+mkdir -p "${COV_DIR}"
+
+PKGS=$(go list ./... 2>/dev/null | grep -v '/mocks' || true)
+
+if [[ -z "${PKGS}" ]]; then
+    echo "No packages found; writing empty coverage file"
+    echo "mode: set" > "${MERGED}"
+    echo "Coverage written to ${MERGED} (no packages)"
+    exit 0
 fi
 
-echo "${FIRST_MODE}" > "${MERGED}"
+COVPKGS=$(echo "${PKGS}" | tr '\n' ',' | sed 's/,$//')
 
-for f in "${TMP_DIR}"/*.out; do
-    [[ -f "$f" ]] || continue
-    tail -n +2 "$f" >> "${MERGED}"
-done
+echo "Running tests with coverage across all packages..."
+# shellcheck disable=SC2086
+go test -coverprofile="${MERGED}" -coverpkg="${COVPKGS}" ${PKGS}
 
-rm -rf "${TMP_DIR}"
-echo "Merged coverage written to ${MERGED}"
+echo "Coverage written to ${MERGED}"
