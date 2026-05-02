@@ -1,43 +1,86 @@
-// Package repositories exposes public repository contracts and aliases.
+// Package repositories exposes the public repositories API and REST registry facade.
 package repositories
 
 import (
-	contracts "github.com/brunojet/go-infra-ports/pkg/repositories/contracts"
-	restcontracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	"github.com/brunojet/go-infra-ports/internal/repositories/rest"
 )
 
-// RepositoryCreate aliases the public create input contract.
-type RepositoryCreate[C any] = contracts.RepositoryCreate[C]
+const (
+	// DefaultMethodName is the default key used by registry request mappings.
+	DefaultMethodName = rest.DefaultMethodName
+	// DefaultStatusCode is the default key used by registry response mappings.
+	DefaultStatusCode = rest.DefaultStatusCode
+)
 
-// RepositoryUpdate aliases the public update input contract.
-type RepositoryUpdate[U any] = contracts.RepositoryUpdate[U]
+// RestRegistry aliases the public REST registry contract.
+type RestRegistry = rest.RestRegistry
 
-// RepositorySave aliases the public save input contract.
-type RepositorySave[C any] = contracts.RepositorySave[C]
+// RestRequestSpec aliases the request payload contract used by RestRegistry.
+type RestRequestSpec = rest.RestRequestSpec
 
-// RepositoryResponse aliases the single-entity repository output.
-type RepositoryResponse[R any] = contracts.RepositoryResponse[R]
+// RestResponseSpec aliases the response payload contract used by RestRegistry.
+type RestResponseSpec = rest.RestResponseSpec
 
-// RepositoryResponses aliases the multi-entity repository output.
-type RepositoryResponses[R any] = contracts.RepositoryResponses[R]
+// RestEnvelopeSpec aliases the envelope payload contract used by RestRegistry.
+type RestEnvelopeSpec = rest.RestEnvelopeSpec
 
-// Repository aliases the public storage-agnostic repository contract.
-type Repository[C, R, U any] = contracts.Repository[C, R, U]
+// RestRequest aliases REST request DTO used by RestRepository ports.
+type RestRequest = rest.RestRequest
 
-// RestCreate aliases REST create input.
-type RestCreate[C any] = restcontracts.RestCreate[C]
+// RestResponse aliases REST single response DTO used by RestRepository ports.
+type RestResponse = rest.RestResponse
 
-// RestUpdate aliases REST update input.
-type RestUpdate[U any] = restcontracts.RestUpdate[U]
+// RestResponses aliases REST list response DTO used by RestRepository ports.
+type RestResponses = rest.RestResponses
 
-// RestSave aliases REST save input.
-type RestSave[C any] = restcontracts.RestSave[C]
+// RestRepository aliases the outbound REST repository port contract.
+type RestRepository = rest.RestRepository
 
-// RestResponse aliases REST single-entity output.
-type RestResponse[R any] = restcontracts.RestResponse[R]
+// RegistryOption configures RestRegistry construction.
+type RegistryOption = rest.RegistryOption
 
-// RestResponses aliases REST multi-entity output.
-type RestResponses[R any] = restcontracts.RestResponses[R]
+// DefaultRestRequest provides a raw-body request spec default implementation.
+type DefaultRestRequest = rest.DefaultRestRequest
 
-// RestRepository aliases the public REST repository contract.
-type RestRepository[C, R, U any] = restcontracts.RestRepository[C, R, U]
+// DefaultRestResponse provides a raw-body response spec default implementation.
+type DefaultRestResponse = rest.DefaultRestResponse
+
+// NewRestRegistry builds a REST registry with the provided options.
+func NewRestRegistry(options ...RegistryOption) RestRegistry {
+	return rest.NewRestRegistry(options...)
+}
+
+// WithRequest registers request specs for methods (or default method when empty).
+func WithRequest(spec RestRequestSpec, methods ...string) RegistryOption {
+	return rest.WithRequest(spec, methods...)
+}
+
+// WithRequestEnvelope registers request envelope specs for methods.
+func WithRequestEnvelope(spec RestRequestSpec, methods ...string) RegistryOption {
+	return rest.WithRequestEnvelope(spec, methods...)
+}
+
+// WithResponse registers 2xx response specs (or default status when empty).
+func WithResponse(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+	return rest.WithResponse(spec, statusCodes...)
+}
+
+// WithResponseEnvelope registers envelope specs for 2xx responses.
+func WithResponseEnvelope(spec RestEnvelopeSpec, statusCodes ...int) RegistryOption {
+	return rest.WithResponseEnvelope(spec, statusCodes...)
+}
+
+// WithInformation registers 1xx response specs.
+func WithInformation(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+	return rest.WithInformation(spec, statusCodes...)
+}
+
+// WithRedirection registers 3xx response specs.
+func WithRedirection(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+	return rest.WithRedirection(spec, statusCodes...)
+}
+
+// WithProblem registers 4xx and 5xx response specs.
+func WithProblem(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+	return rest.WithProblem(spec, statusCodes...)
+}
