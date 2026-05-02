@@ -7,7 +7,7 @@ MERGED="${COV_DIR}/coverage.out"
 mkdir -p "${COV_DIR}"
 
 ALL_PKGS=$(go list ./... 2>/dev/null | grep -Ev '/mocks($|/)' || true)
-TEST_PKGS=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./... 2>/dev/null | grep -Ev '/mocks($|/)' || true)
+TEST_PKGS=$(go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./... 2>/dev/null | grep -Ev '/mocks($|/)' | awk 'NF' || true)
 
 if [[ -z "${ALL_PKGS}" ]]; then
     echo "No packages found; writing empty coverage file"
