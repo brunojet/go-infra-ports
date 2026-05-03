@@ -15,7 +15,12 @@ import (
 type RestRequestSpec interface {
 	// New returns a new empty request spec instance of the same concrete type.
 	New() RestRequestSpec
-	// SetBody assigns a raw JSON payload to the request spec.
+	// SetBody assigns the request body from another request spec.
+	//
+	// Implementations may support raw body bytes when body is a concrete request
+	// spec that carries them, such as *DefaultRestRequest, or they may treat body
+	// as a typed payload to be marshaled according to the registry or adapter
+	// implementation.
 	SetBody(body RestRequestSpec)
 }
 
