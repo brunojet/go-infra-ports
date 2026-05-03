@@ -151,5 +151,9 @@ type testLocalRequest struct {
 	Body json.RawMessage
 }
 
-func (r *testLocalRequest) New() RestRequestSpec      { return &testLocalRequest{} }
-func (r *testLocalRequest) SetBody(b json.RawMessage) { r.Body = b }
+func (r *testLocalRequest) New() RestRequestSpec { return &testLocalRequest{} }
+func (r *testLocalRequest) SetBody(b RestRequestSpec) {
+	if raw, ok := b.(*DefaultRestRequest); ok {
+		r.Body = append([]byte(nil), raw.Body...)
+	}
+}

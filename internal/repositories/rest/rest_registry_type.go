@@ -31,8 +31,19 @@ func (d *DefaultRestRequest) New() RestRequestSpec {
 	return &DefaultRestRequest{}
 }
 
-func (d *DefaultRestRequest) SetBody(body json.RawMessage) {
-	d.Body = body
+func (d *DefaultRestRequest) SetBody(body RestRequestSpec) {
+	if body == nil {
+		d.Body = nil
+		return
+	}
+	if raw, ok := body.(*DefaultRestRequest); ok {
+		d.Body = append([]byte(nil), raw.Body...)
+		return
+	}
+	data, err := json.Marshal(body)
+	if err == nil {
+		d.Body = data
+	}
 }
 
 type DefaultRestResponse struct {

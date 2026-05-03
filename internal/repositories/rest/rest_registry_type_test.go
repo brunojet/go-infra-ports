@@ -8,21 +8,65 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
+type marshalableRequestSpec struct {
+	Name string `json:"name"`
+}
+
+func (m *marshalableRequestSpec) New() RestRequestSpec    { return &marshalableRequestSpec{} }
+func (m *marshalableRequestSpec) SetBody(RestRequestSpec) {}
+
+type unmarshalableRequestSpec struct {
+	Ch chan int `json:"ch"`
+}
+
+func (u *unmarshalableRequestSpec) New() RestRequestSpec    { return &unmarshalableRequestSpec{} }
+func (u *unmarshalableRequestSpec) SetBody(RestRequestSpec) {}
+
 func TestDefaultRestRequest_NewAndSetBody(t *testing.T) {
 	req := &DefaultRestRequest{}
 	spec := req.New()
 	if spec == nil {
 		t.Fatal("New() returned nil")
 	}
-	payload := json.RawMessage(`{"key":"value"}`)
-	spec.SetBody(payload)
+	inner := &DefaultRestRequest{Body: json.RawMessage(`{"key":"value"}`)}
+	spec.SetBody(inner)
 
 	cast, ok := spec.(*DefaultRestRequest)
 	if !ok {
 		t.Fatalf("unexpected type: %T", spec)
 	}
-	if !bytes.Equal(cast.Body, payload) {
-		t.Fatalf("unexpected body: got %s, want %s", cast.Body, payload)
+	expected := json.RawMessage(`{"key":"value"}`)
+	if !bytes.Equal(cast.Body, expected) {
+		t.Fatalf("unexpected body: got %s, want %s", cast.Body, expected)
+	}
+}
+
+func TestDefaultRestRequest_SetBodyNil_ClearsBody(t *testing.T) {
+	req := &DefaultRestRequest{Body: json.RawMessage(`{"before":true}`)}
+	req.SetBody(nil)
+
+	if req.Body != nil {
+		t.Fatalf("expected nil body, got %s", req.Body)
+	}
+}
+
+func TestDefaultRestRequest_SetBodyMarshalFallback_SetsBody(t *testing.T) {
+	req := &DefaultRestRequest{}
+	req.SetBody(&marshalableRequestSpec{Name: "alpha"})
+
+	if string(req.Body) != `{"name":"alpha"}` {
+		t.Fatalf("unexpected marshaled body: %s", req.Body)
+	}
+}
+
+func TestDefaultRestRequest_SetBodyMarshalError_LeavesBodyUnchanged(t *testing.T) {
+	req := &DefaultRestRequest{Body: json.RawMessage(`{"keep":true}`)}
+	before := append([]byte(nil), req.Body...)
+
+	req.SetBody(&unmarshalableRequestSpec{Ch: make(chan int)})
+
+	if !bytes.Equal(req.Body, before) {
+		t.Fatalf("expected body to remain unchanged on marshal error; got %s want %s", req.Body, before)
 	}
 }
 

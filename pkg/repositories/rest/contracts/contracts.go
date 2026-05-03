@@ -16,7 +16,7 @@ type RestRequestSpec interface {
 	// New returns a new empty request spec instance of the same concrete type.
 	New() RestRequestSpec
 	// SetBody assigns a raw JSON payload to the request spec.
-	SetBody(body json.RawMessage)
+	SetBody(body RestRequestSpec)
 }
 
 // RestResponseSpec defines the response payload contract resolved by RestRegistry.

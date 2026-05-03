@@ -17,9 +17,7 @@ func (t *testRequestSpec) New() restcontracts.RestRequestSpec {
 	return &testRequestSpec{}
 }
 
-func (t *testRequestSpec) SetBody(body json.RawMessage) {
-	t.Body = body
-}
+func (t *testRequestSpec) SetBody(body restcontracts.RestRequestSpec) {}
 
 type testResponseSpec struct {
 	Body json.RawMessage
