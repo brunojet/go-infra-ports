@@ -495,6 +495,63 @@ func TestMapDownstreamContext_HeadersError_ReturnsWrappedError(t *testing.T) {
 	}
 }
 
+func TestMapUpstreamContext_WithNilPointer_ReturnsError(t *testing.T) {
+	svc, _ := NewRestService[testCreatePayload, testResponse, testUpdatePayload](&statusMockRepository{})
+	impl, ok := svc.(*restService[testCreatePayload, testResponse, testUpdatePayload])
+	if !ok {
+		t.Fatal("expected restService implementation")
+	}
+
+	err := impl.mapUpstreamContext(types.RequestContext{}, nil)
+	if err != errRestServiceRequestContextNil {
+		t.Fatalf("expected errRestServiceRequestContextNil, got %v", err)
+	}
+}
+
+func TestMapDownstreamContext_WithNilPointer_ReturnsError(t *testing.T) {
+	svc, _ := NewRestService[testCreatePayload, testResponse, testUpdatePayload](&statusMockRepository{})
+	impl, ok := svc.(*restService[testCreatePayload, testResponse, testUpdatePayload])
+	if !ok {
+		t.Fatal("expected restService implementation")
+	}
+
+	err := impl.mapDownstreamContext(types.ResponseContext{}, nil)
+	if err != errRestServiceResponseContextNil {
+		t.Fatalf("expected errRestServiceResponseContextNil, got %v", err)
+	}
+}
+
+func TestMapUpstreamContext_InitializesAndCopiesQueryAndHeaders(t *testing.T) {
+	svc, _ := NewRestService[testCreatePayload, testResponse, testUpdatePayload](&statusMockRepository{})
+	impl, ok := svc.(*restService[testCreatePayload, testResponse, testUpdatePayload])
+	if !ok {
+		t.Fatal("expected restService implementation")
+	}
+
+	reqCtx := types.RequestContext{
+		Query:   url.Values{"q": {"value"}},
+		Headers: http.Header{"X-Req": {"1"}},
+		Identifiers: types.Identifiers{
+			"id": "123",
+		},
+	}
+	upsCtx := types.RequestContext{}
+
+	err := impl.mapUpstreamContext(reqCtx, &upsCtx)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if got := upsCtx.Query.Get("q"); got != "value" {
+		t.Fatalf("expected query value 'value', got %q", got)
+	}
+	if got := upsCtx.Headers.Get("X-Req"); got != "1" {
+		t.Fatalf("expected header value '1', got %q", got)
+	}
+	if got := upsCtx.Identifiers["id"]; got != "123" {
+		t.Fatalf("expected identifier '123', got %q", got)
+	}
+}
+
 func TestMapRestResponse_2xx_WithNilData_ReturnsError(t *testing.T) {
 	repo := &statusMockRepository{statusCode: 200, data: nil}
 	svc, _ := NewRestService[testCreatePayload, testResponse, testUpdatePayload](repo)

@@ -1,6 +1,9 @@
 package rest
 
-import "net/http"
+import (
+	"net/http"
+	"net/url"
+)
 
 const (
 	statusInfo = http.StatusContinue
@@ -12,6 +15,15 @@ const (
 type restNon2xxMapper func(statusCode int, upsPayload RestResponseSpec, serviceMeta *ServiceMeta) error
 
 func (s *restService[C, R, U]) mapUpstreamContext(reqCtx RequestContext, upsCtx *RequestContext) error {
+	if upsCtx == nil {
+		return errRestServiceRequestContextNil
+	}
+	if upsCtx.Query == nil {
+		upsCtx.Query = url.Values{}
+	}
+	if upsCtx.Headers == nil {
+		upsCtx.Headers = http.Header{}
+	}
 	if err := s.upstream.ToUpstreamQuery(reqCtx.Query, upsCtx.Query); err != nil {
 		return errRestServiceUpstreamMappingFailed("ToUpstreamQuery", err)
 	}
@@ -23,6 +35,9 @@ func (s *restService[C, R, U]) mapUpstreamContext(reqCtx RequestContext, upsCtx 
 }
 
 func (s *restService[C, R, U]) mapDownstreamContext(upsCtx ResponseContext, respCtx *ResponseContext) error {
+	if respCtx == nil {
+		return errRestServiceResponseContextNil
+	}
 	if err := s.downstream.ToDownstreamStatusCode(upsCtx.StatusCode, &respCtx.StatusCode); err != nil {
 		return errRestServiceDownstreamMappingFailed("ToDownstreamStatusCode", err)
 	}
