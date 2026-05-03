@@ -26,6 +26,9 @@ func (s *restService[C, R, U]) mapDownstreamContext(upsCtx ResponseContext, resp
 	if err := s.downstream.ToDownstreamStatusCode(upsCtx.StatusCode, &respCtx.StatusCode); err != nil {
 		return errRestServiceDownstreamMappingFailed("ToDownstreamStatusCode", err)
 	}
+	if respCtx.Headers == nil {
+		respCtx.Headers = http.Header{}
+	}
 	if err := s.downstream.ToDownstreamHeaders(upsCtx.Headers, respCtx.Headers); err != nil {
 		return errRestServiceDownstreamMappingFailed("ToDownstreamHeaders", err)
 	}
