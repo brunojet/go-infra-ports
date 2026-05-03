@@ -50,7 +50,7 @@ func (r *restRegistry) ResolveEnvelopeRequest(name string, dataBody *[]byte) err
 	if envelope == nil {
 		return errRestResolveEnvelopeRequestSpecNewNil
 	}
-	envelope.SetBody(append([]byte(nil), (*dataBody)...))
+	envelope.SetBody(&DefaultRestRequest{Body: append([]byte(nil), (*dataBody)...)})
 	return marshalInto(dataBody, envelope, errRestResolveEnvelopeRequestMarshal)
 }
 

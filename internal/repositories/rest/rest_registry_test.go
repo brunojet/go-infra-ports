@@ -38,8 +38,10 @@ func (t *testEnvelopeRequest) New() RestRequestSpec {
 	return &testEnvelopeRequest{}
 }
 
-func (t *testEnvelopeRequest) SetBody(body json.RawMessage) {
-	t.Data = body
+func (t *testEnvelopeRequest) SetBody(body RestRequestSpec) {
+	if raw, ok := body.(*DefaultRestRequest); ok {
+		t.Data = append([]byte(nil), raw.Body...)
+	}
 }
 
 type testResponse struct {
@@ -324,19 +326,19 @@ type marshalFailRequest struct {
 }
 
 func (m *marshalFailRequest) New() RestRequestSpec         { return &marshalFailRequest{} }
-func (m *marshalFailRequest) SetBody(body json.RawMessage) {}
+func (m *marshalFailRequest) SetBody(body RestRequestSpec) {}
 
 type nilEnvelopeRequest struct{}
 
 func (n *nilEnvelopeRequest) New() RestRequestSpec         { return nil }
-func (n *nilEnvelopeRequest) SetBody(body json.RawMessage) {}
+func (n *nilEnvelopeRequest) SetBody(body RestRequestSpec) {}
 
 type marshalFailEnvelopeRequest struct {
 	C chan int `json:"c"`
 }
 
 func (m *marshalFailEnvelopeRequest) New() RestRequestSpec         { return &marshalFailEnvelopeRequest{} }
-func (m *marshalFailEnvelopeRequest) SetBody(body json.RawMessage) {}
+func (m *marshalFailEnvelopeRequest) SetBody(body RestRequestSpec) {}
 
 type nilItemSliceResponse struct{}
 
@@ -370,4 +372,4 @@ func (n *nilNewEnvelopeSpec) EnvelopeMeta() types.ResponseMeta { return types.Re
 type nilRequestSpec struct{}
 
 func (n *nilRequestSpec) New() RestRequestSpec         { return nil }
-func (n *nilRequestSpec) SetBody(body json.RawMessage) {}
+func (n *nilRequestSpec) SetBody(body RestRequestSpec) {}
