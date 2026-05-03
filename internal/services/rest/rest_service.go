@@ -114,10 +114,7 @@ func (s *restService[C, R, U]) Update(ctx context.Context, request ServiceUpdate
 	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
 }
 
-// Save implements Service[C, R, U].Save by mapping patch request through mappers.
-// Note: ServiceSave carries payload C, but ToUpstreamPatch expects U.
-// For this implementation, we create a dummy U value to satisfy the mapper interface;
-// the actual create payload is used for PATCH. Alternatively, Save should use ServiceUpdate[U].
+// Save implements Service[C, R, U].Save by mapping the save request through mappers.
 // nolint:dupl // Similar to Create flow but calls repo.Save and ToUpstreamPut
 func (s *restService[C, R, U]) Save(ctx context.Context, request ServiceSave[C], response *ServiceResponse[R]) error {
 	if response == nil {
