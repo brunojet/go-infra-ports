@@ -23,7 +23,7 @@ type ServiceUpdate[U any] struct {
 	Body U
 }
 
-// ServiceSave carries input for partial-save operations.
+// ServiceSave carries input for full-replacement save operations (PUT semantics).
 type ServiceSave[C any] struct {
 	// Context carries transport metadata.
 	Context types.RequestContext
@@ -73,7 +73,7 @@ type Service[C, R, U any] interface {
 	Get(ctx context.Context, reqCtx types.RequestContext, response *ServiceResponse[R]) error
 	// Update replaces entity state.
 	Update(ctx context.Context, request ServiceUpdate[U], response *ServiceResponse[R]) error
-	// Save applies partial changes or upsert semantics.
+	// Save replaces the full entity state (PUT semantics).
 	Save(ctx context.Context, request ServiceSave[C], response *ServiceResponse[R]) error
 	// Delete removes one entity identified in reqCtx.
 	Delete(ctx context.Context, reqCtx types.RequestContext, response *ServiceResponse[R]) error
