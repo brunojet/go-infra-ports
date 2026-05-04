@@ -38,11 +38,11 @@ func (r *restRegistry) ResolveRequest(body RestRequestSpec, requestBody *[]byte)
 	return marshalInto(requestBody, body, errRestResolveRequestMarshal)
 }
 
-func (r *restRegistry) ResolveEnvelopeRequest(name string, dataBody *[]byte) error {
+func (r *restRegistry) ResolveEnvelopeRequest(restMethod RestMethod, dataBody *[]byte) error {
 	if dataBody == nil {
 		return errRestResolveEnvelopeRequestBodyNil
 	}
-	prototype := r.resolveRequestEnvelopeSpec(name)
+	prototype := r.resolveRequestEnvelopeSpec(restMethod)
 	if prototype == nil {
 		return nil
 	}
@@ -50,7 +50,7 @@ func (r *restRegistry) ResolveEnvelopeRequest(name string, dataBody *[]byte) err
 	if envelope == nil {
 		return errRestResolveEnvelopeRequestSpecNewNil
 	}
-	envelope.SetBody(append([]byte(nil), (*dataBody)...))
+	envelope.SetBody(&DefaultRestRequest{Body: append([]byte(nil), (*dataBody)...)})
 	return marshalInto(dataBody, envelope, errRestResolveEnvelopeRequestMarshal)
 }
 
@@ -58,11 +58,7 @@ func (r *restRegistry) ResolveResponse(status int, responseBody []byte, body *Re
 	if body == nil {
 		return errRestResolveResponseBodyNil
 	}
-	prototype, err := r.resolveResponseSpec(status)
-	if err != nil {
-		return err
-	}
-	instance, err := resolveResponseInstance(prototype)
+	instance, err := r.newResponseSpec(status)
 	if err != nil {
 		return err
 	}
@@ -126,11 +122,10 @@ func (r *restRegistry) ResolveEnvelopeResponse(status int, dataBody *[]byte, met
 	return nil
 }
 
-func (r *restRegistry) NewRequestSpec(name string) (RestRequestSpec, error) {
-	prototype := r.resolveRequestSpec(name)
-	instance := prototype.New()
-	if instance == nil {
-		return nil, errRestNewRequestSpecNil
+func (r *restRegistry) NewRequestSpec(method RestMethod) (RestRequestSpec, error) {
+	instance, err := r.newRequestSpec(method)
+	if err != nil {
+		return nil, err
 	}
 	return instance, nil
 }

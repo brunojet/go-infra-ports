@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -8,6 +9,12 @@ import (
 	restcontracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
+
+type testHttpClientStub struct{}
+
+func (testHttpClientStub) Do(_ context.Context, _ *http.Request) (*http.Response, error) {
+	return nil, nil
+}
 
 type testRequestSpec struct {
 	Body json.RawMessage
@@ -17,9 +24,7 @@ func (t *testRequestSpec) New() restcontracts.RestRequestSpec {
 	return &testRequestSpec{}
 }
 
-func (t *testRequestSpec) SetBody(body json.RawMessage) {
-	t.Body = body
-}
+func (t *testRequestSpec) SetBody(body restcontracts.RestRequestSpec) {}
 
 type testResponseSpec struct {
 	Body json.RawMessage
@@ -71,8 +76,8 @@ func TestRegistryOptions_ReturnOptions(t *testing.T) {
 	env := &testEnvelopeSpec{}
 
 	opts := []RegistryOption{
-		WithRequest(req, http.MethodPost),
-		WithRequestEnvelope(req, http.MethodPost),
+		WithRequest(req, restcontracts.MethodCreate),
+		WithRequestEnvelope(req, restcontracts.MethodCreate),
 		WithResponse(resp, http.StatusOK),
 		WithResponseEnvelope(env, http.StatusOK),
 		WithInformation(resp, http.StatusContinue),
@@ -100,5 +105,35 @@ func TestAliases_AreUsable(t *testing.T) {
 	}
 	if len(responses.Data) != 1 {
 		t.Fatalf("expected responses data alias to be usable")
+	}
+}
+
+func TestNewRestRepository_ReturnsNonNil(t *testing.T) {
+	reg := NewRestRegistry()
+	repo := NewRestRepository(
+		WithHttpClient(&testHttpClientStub{}),
+		WithRegistryOpt(reg),
+	)
+	if repo == nil {
+		t.Fatal("expected non-nil repository")
+	}
+}
+
+func TestNewRestRepository_MissingClient_Panics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for missing HttpClient")
+		}
+	}()
+	NewRestRepository(WithRegistryOpt(NewRestRegistry()))
+}
+
+func TestNewRestRepository_WithValidClient_ReturnsNonNil(t *testing.T) {
+	repo := NewRestRepository(
+		WithHttpClient(&testHttpClientStub{}),
+		WithRegistryOpt(NewRestRegistry()),
+	)
+	if repo == nil {
+		t.Fatal("expected non-nil repository")
 	}
 }

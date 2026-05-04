@@ -19,9 +19,10 @@ var (
 	errRestResolveEnvelopeResponseMetaNil    = errors.New("rest: resolve envelope response: meta must not be nil")
 	errRestResolveEnvelopeResponseSpecNewNil = errors.New("rest: resolve envelope response: spec New returned nil")
 
-	errRestRegisterRequestSpecNil  = errors.New("rest: registerRequest: spec must not be nil")
-	errRestRegisterResponseSpecNil = errors.New("rest: registerResponse: spec must not be nil")
-	errRestNewRequestSpecNil       = errors.New("rest: NewRequestSpec: spec New returned nil")
+	errRestRegisterRequestSpecNil      = errors.New("rest: registerRequest: spec must not be nil")
+	errRestRegisterResponseSpecNil     = errors.New("rest: registerResponse: spec must not be nil")
+	errRestNewRequestSpecNil           = errors.New("rest: NewRequestSpec: spec New returned nil")
+	errRestRegisterRequestMethodsEmpty = errors.New("rest: registerRequest: at least one method must be specified")
 )
 
 func errRestResolveRequestMarshal(err error) error {
@@ -52,10 +53,14 @@ func errRestResolveEnvelopeResponseUnmarshal(err error) error {
 	return fmt.Errorf("rest: resolve envelope response unmarshal: %w", err)
 }
 
-func errRestRegisterRequestInvalidMethod(method string) error {
-	return fmt.Errorf("rest: registerRequest: invalid method %q, must be POST, PUT or PATCH", method)
+func errRestRegisterRequestInvalidMethod(method RestMethod) error {
+	return fmt.Errorf("rest: registerRequest: invalid method %v, must include POST, PUT or PATCH bits", method)
 }
 
 func errRestRegisterResponseOutOfRange(code, firstStatusCode, lastStatusCode int) error {
 	return fmt.Errorf("rest: registerResponse: status code %d out of range [%d, %d]", code, firstStatusCode, lastStatusCode)
+}
+
+func errRestNewRequestSpecNotFound(restMethod RestMethod) error {
+	return fmt.Errorf("rest: NewRequestSpec: no request spec registered with method %v", restMethod)
 }
