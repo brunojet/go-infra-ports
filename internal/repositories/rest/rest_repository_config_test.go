@@ -21,11 +21,11 @@ type registryStub struct{}
 
 func (registryStub) Merge(other RestRegistry) RestRegistry                           { return other }
 func (registryStub) ResolveRequest(RestRequestSpec, *[]byte) error                   { return nil }
-func (registryStub) ResolveEnvelopeRequest(string, *[]byte) error                    { return nil }
+func (registryStub) ResolveEnvelopeRequest(_ RestMethod, dataBody *[]byte) error     { return nil }
 func (registryStub) ResolveResponse(int, []byte, *RestResponseSpec) error            { return nil }
 func (registryStub) ResolveResponses(int, []byte, *[]RestResponseSpec) error         { return nil }
 func (registryStub) ResolveEnvelopeResponse(int, *[]byte, *types.ResponseMeta) error { return nil }
-func (registryStub) NewRequestSpec(string) (RestRequestSpec, error)                  { return nil, nil }
+func (registryStub) NewRequestSpec(_ RestMethod) (RestRequestSpec, error)            { return nil, nil }
 func (registryStub) ReleaseRequestSpec(RestRequestSpec)                              {}
 
 func validOpts(t *testing.T) []RepositoryOption {

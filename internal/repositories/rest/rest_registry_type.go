@@ -7,9 +7,26 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
+const DefaultStatusCode = 0
+
+// RestMethod selects which HTTP verbs are registered for a route entry.
+// Alias to the public contract type so signatures match across packages.
+type RestMethod = contracts.RestMethod
+
+var (
+	writeMethodsList = []RestMethod{contracts.MethodCreate, contracts.MethodUpdate, contracts.MethodSave}
+)
+
 const (
-	DefaultMethodName = "default"
-	DefaultStatusCode = 0
+	MethodCreate         = contracts.MethodCreate
+	MethodList           = contracts.MethodList
+	MethodGet            = contracts.MethodGet
+	MethodUpdate         = contracts.MethodUpdate
+	MethodSave           = contracts.MethodSave
+	MethodDelete         = contracts.MethodDelete
+	AllWriteMethods      = contracts.AllWriteMethods
+	AllCollectionMethods = contracts.AllCollectionMethods
+	AllInstanceMethods   = contracts.AllInstanceMethods
 )
 
 type (

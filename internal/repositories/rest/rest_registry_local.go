@@ -25,18 +25,32 @@ func (r *restRegistry) resolveResponseSpec(status int) (RestResponseSpec, error)
 	}
 }
 
-func (r *restRegistry) resolveRequestSpec(name string) RestRequestSpec {
-	if spec, ok := r.cfg.Requests[name]; ok && spec != nil {
-		return spec
+func (r *restRegistry) newResponseSpec(status int) (RestResponseSpec, error) {
+	prototype, err := r.resolveResponseSpec(status)
+	if err != nil {
+		return nil, err
 	}
-	return r.cfg.Requests[DefaultMethodName]
+	instance := prototype.New()
+	if instance == nil {
+		return nil, errRestResolveResponseSpecNewNil
+	}
+	return instance, nil
 }
 
-func (r *restRegistry) resolveRequestEnvelopeSpec(name string) RestRequestSpec {
-	if spec, ok := r.cfg.RequestsEnvelopes[name]; ok && spec != nil {
-		return spec
+func (r *restRegistry) newRequestSpec(restMethod RestMethod) (RestRequestSpec, error) {
+	spec, ok := r.cfg.Requests[restMethod]
+	if !ok {
+		return nil, errRestNewRequestSpecNotFound(restMethod)
 	}
-	if spec, ok := r.cfg.RequestsEnvelopes[DefaultMethodName]; ok && spec != nil {
+	instance := spec.New()
+	if instance == nil {
+		return nil, errRestNewRequestSpecNil
+	}
+	return instance, nil
+}
+
+func (r *restRegistry) resolveRequestEnvelopeSpec(restMethod RestMethod) RestRequestSpec {
+	if spec, ok := r.cfg.RequestsEnvelopes[restMethod]; ok && spec != nil {
 		return spec
 	}
 	return nil

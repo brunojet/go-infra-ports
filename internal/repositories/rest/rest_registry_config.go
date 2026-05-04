@@ -4,18 +4,9 @@ import (
 	"net/http"
 )
 
-var (
-	validRequestMethods = map[string]struct{}{
-		DefaultMethodName: {},
-		http.MethodPost:   {},
-		http.MethodPut:    {},
-		http.MethodPatch:  {},
-	}
-)
-
 type registryOptions struct {
-	Requests          map[string]RestRequestSpec
-	RequestsEnvelopes map[string]RestRequestSpec
+	Requests          map[RestMethod]RestRequestSpec
+	RequestsEnvelopes map[RestMethod]RestRequestSpec
 	Responses         map[int]RestResponseSpec
 	ResponseEnvelopes map[int]RestEnvelopeSpec
 	Informations      map[int]RestResponseSpec
@@ -27,8 +18,12 @@ type RegistryOption func(*registryOptions)
 
 func newRegistryOptions() *registryOptions {
 	return &registryOptions{
-		Requests:          map[string]RestRequestSpec{DefaultMethodName: &DefaultRestRequest{}},
-		RequestsEnvelopes: make(map[string]RestRequestSpec),
+		Requests: map[RestMethod]RestRequestSpec{
+			MethodCreate: &DefaultRestRequest{},
+			MethodUpdate: &DefaultRestRequest{},
+			MethodSave:   &DefaultRestRequest{},
+		},
+		RequestsEnvelopes: make(map[RestMethod]RestRequestSpec),
 		Responses:         map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
 		ResponseEnvelopes: make(map[int]RestEnvelopeSpec),
 		Informations:      map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
@@ -45,18 +40,21 @@ func newRegistryConfig(options ...RegistryOption) *registryOptions {
 	return cfg
 }
 
-func (o *registryOptions) registerRequest(spec RestRequestSpec, target map[string]RestRequestSpec, methods ...string) {
+func (o *registryOptions) registerRequest(spec RestRequestSpec, target map[RestMethod]RestRequestSpec, methods RestMethod) {
 	if spec == nil {
 		panic(errRestRegisterRequestSpecNil)
 	}
-	if len(methods) == 0 {
-		methods = []string{DefaultMethodName}
+	if methods == 0 {
+		panic(errRestRegisterRequestMethodsEmpty)
 	}
-	for _, method := range methods {
-		if _, ok := validRequestMethods[method]; !ok {
-			panic(errRestRegisterRequestInvalidMethod(method))
+	// Methods must include at least one write method (POST/PUT/PATCH)
+	if methods&AllWriteMethods == 0 {
+		panic(errRestRegisterRequestInvalidMethod(methods))
+	}
+	for _, method := range writeMethodsList {
+		if methods&method != 0 {
+			target[method] = spec
 		}
-		target[method] = spec
 	}
 }
 
@@ -95,15 +93,15 @@ func (o *registryOptions) registerResponseEnvelope(spec RestEnvelopeSpec, status
 	}
 }
 
-func WithRequest(spec RestRequestSpec, methods ...string) RegistryOption {
+func WithRequest(spec RestRequestSpec, methods RestMethod) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerRequest(spec, ro.Requests, methods...)
+		ro.registerRequest(spec, ro.Requests, methods)
 	}
 }
 
-func WithRequestEnvelope(spec RestRequestSpec, methods ...string) RegistryOption {
+func WithRequestEnvelope(spec RestRequestSpec, methods RestMethod) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerRequest(spec, ro.RequestsEnvelopes, methods...)
+		ro.registerRequest(spec, ro.RequestsEnvelopes, methods)
 	}
 }
 

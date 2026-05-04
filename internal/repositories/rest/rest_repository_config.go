@@ -7,21 +7,6 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
-// RestMethod selects which HTTP verbs are registered for a route entry.
-type RestMethod uint8
-
-const (
-	MethodCreate RestMethod = 1 << iota // POST  — collection
-	MethodList                          // GET   — collection
-	MethodGet                           // GET   — instance
-	MethodUpdate                        // PUT   — instance
-	MethodSave                          // PATCH — instance
-	MethodDelete                        // DELETE — instance
-
-	AllCollectionMethods RestMethod = MethodCreate | MethodList
-	AllInstanceMethods   RestMethod = MethodGet | MethodUpdate | MethodSave | MethodDelete
-)
-
 var (
 	DefaultCollectionPathEntry = &pathEntry{templateFmt: "/"}
 	DefaultInstancePathEntry   = &pathEntry{templateFmt: "/%s", paramNames: []string{"id"}}

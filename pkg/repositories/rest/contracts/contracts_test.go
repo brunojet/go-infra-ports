@@ -34,11 +34,11 @@ type testRegistry struct{}
 
 func (testRegistry) Merge(other RestRegistry) RestRegistry                           { return other }
 func (testRegistry) ResolveRequest(RestRequestSpec, *[]byte) error                   { return nil }
-func (testRegistry) ResolveEnvelopeRequest(string, *[]byte) error                    { return nil }
 func (testRegistry) ResolveResponse(int, []byte, *RestResponseSpec) error            { return nil }
 func (testRegistry) ResolveResponses(int, []byte, *[]RestResponseSpec) error         { return nil }
 func (testRegistry) ResolveEnvelopeResponse(int, *[]byte, *types.ResponseMeta) error { return nil }
-func (testRegistry) NewRequestSpec(string) (RestRequestSpec, error)                  { return testReqSpec{}, nil }
+func (testRegistry) ResolveEnvelopeRequest(RestMethod, *[]byte) error                { return nil }
+func (testRegistry) NewRequestSpec(RestMethod) (RestRequestSpec, error)              { return testReqSpec{}, nil }
 func (testRegistry) ReleaseRequestSpec(RestRequestSpec)                              {}
 
 type testRepository struct{}

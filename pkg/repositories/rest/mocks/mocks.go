@@ -217,18 +217,18 @@ func (mr *MockRestRegistryMockRecorder) Merge(other interface{}) *gomock.Call {
 }
 
 // NewRequestSpec mocks base method.
-func (m *MockRestRegistry) NewRequestSpec(name string) (contracts.RestRequestSpec, error) {
+func (m *MockRestRegistry) NewRequestSpec(method contracts.RestMethod) (contracts.RestRequestSpec, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewRequestSpec", name)
+	ret := m.ctrl.Call(m, "NewRequestSpec", method)
 	ret0, _ := ret[0].(contracts.RestRequestSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewRequestSpec indicates an expected call of NewRequestSpec.
-func (mr *MockRestRegistryMockRecorder) NewRequestSpec(name interface{}) *gomock.Call {
+func (mr *MockRestRegistryMockRecorder) NewRequestSpec(method interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRequestSpec", reflect.TypeOf((*MockRestRegistry)(nil).NewRequestSpec), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRequestSpec", reflect.TypeOf((*MockRestRegistry)(nil).NewRequestSpec), method)
 }
 
 // ReleaseRequestSpec mocks base method.
@@ -244,17 +244,17 @@ func (mr *MockRestRegistryMockRecorder) ReleaseRequestSpec(spec interface{}) *go
 }
 
 // ResolveEnvelopeRequest mocks base method.
-func (m *MockRestRegistry) ResolveEnvelopeRequest(name string, dataBody *[]byte) error {
+func (m *MockRestRegistry) ResolveEnvelopeRequest(method contracts.RestMethod, dataBody *[]byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolveEnvelopeRequest", name, dataBody)
+	ret := m.ctrl.Call(m, "ResolveEnvelopeRequest", method, dataBody)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ResolveEnvelopeRequest indicates an expected call of ResolveEnvelopeRequest.
-func (mr *MockRestRegistryMockRecorder) ResolveEnvelopeRequest(name, dataBody interface{}) *gomock.Call {
+func (mr *MockRestRegistryMockRecorder) ResolveEnvelopeRequest(method, dataBody interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveEnvelopeRequest", reflect.TypeOf((*MockRestRegistry)(nil).ResolveEnvelopeRequest), name, dataBody)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveEnvelopeRequest", reflect.TypeOf((*MockRestRegistry)(nil).ResolveEnvelopeRequest), method, dataBody)
 }
 
 // ResolveEnvelopeResponse mocks base method.
