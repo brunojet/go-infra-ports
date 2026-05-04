@@ -61,7 +61,7 @@ func TestResolveURL_UnconfiguredPathMethod_ReturnsError(t *testing.T) {
 		WithBasePath("/api"),
 		WithPath(MethodGet, "/users/{id}"),
 	)
-	r.opts.paths = map[PathMethod]*pathEntry{}
+	r.opts.paths = map[RestMethod]*pathEntry{}
 
 	_, err := r.resolveURL(MethodCreate, nil, nil)
 	if err == nil {

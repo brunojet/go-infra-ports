@@ -91,7 +91,7 @@ func TestWithBasePath_Valid_Sets(t *testing.T) {
 
 func TestWithPath_CollectionMethods_NoParams(t *testing.T) {
 	o := mustOpts(t, WithPath(MethodCreate|MethodList, "/users"))
-	for _, m := range []PathMethod{MethodCreate, MethodList} {
+	for _, m := range []RestMethod{MethodCreate, MethodList} {
 		e := o.paths[m]
 		if e == nil || e.templateFmt != "/users" {
 			t.Fatalf("expected templateFmt=/users for method %v, got %v", m, e)
@@ -104,7 +104,7 @@ func TestWithPath_CollectionMethods_NoParams(t *testing.T) {
 
 func TestWithPath_InstanceMethods_WithParams(t *testing.T) {
 	o := mustOpts(t, WithPath(MethodGet|MethodUpdate|MethodSave|MethodDelete, "/users/{id}"))
-	for _, m := range []PathMethod{MethodGet, MethodUpdate, MethodSave, MethodDelete} {
+	for _, m := range []RestMethod{MethodGet, MethodUpdate, MethodSave, MethodDelete} {
 		e := o.paths[m]
 		if e == nil || e.templateFmt != "/users/%s" {
 			t.Fatalf("expected templateFmt=/users/%%s for method %v, got %v", m, e)
@@ -117,7 +117,7 @@ func TestWithPath_InstanceMethods_WithParams(t *testing.T) {
 
 func TestWithPath_AllMethods_WithParams(t *testing.T) {
 	o := mustOpts(t, WithPath(AllCollectionMethods|AllInstanceMethods, "/resources/{id}"))
-	for _, m := range []PathMethod{MethodCreate, MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete} {
+	for _, m := range []RestMethod{MethodCreate, MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete} {
 		e := o.paths[m]
 		if e == nil || e.templateFmt != "/resources/%s" {
 			t.Fatalf("expected templateFmt=/resources/%%s for method %v, got %v", m, e)
@@ -147,12 +147,12 @@ func TestWithHeader_Sets(t *testing.T) {
 
 func TestNewRepositoryOptions_Defaults(t *testing.T) {
 	o := mustOpts(t)
-	for _, m := range []PathMethod{MethodCreate, MethodList} {
+	for _, m := range []RestMethod{MethodCreate, MethodList} {
 		if o.paths[m] != DefaultCollectionPathEntry {
 			t.Fatalf("expected DefaultCollectionPathEntry for method %v", m)
 		}
 	}
-	for _, m := range []PathMethod{MethodGet, MethodUpdate, MethodSave, MethodDelete} {
+	for _, m := range []RestMethod{MethodGet, MethodUpdate, MethodSave, MethodDelete} {
 		if o.paths[m] != DefaultInstancePathEntry {
 			t.Fatalf("expected DefaultInstancePathEntry for method %v", m)
 		}
@@ -163,29 +163,29 @@ func TestNewRepositoryOptions_Defaults(t *testing.T) {
 
 func TestFullPath_NoParams_ReturnsBasePathPlusTemplate(t *testing.T) {
 	e := &pathEntry{templateFmt: "/users"}
-	got, err := e.fullPath("/api/v1", types.Identifiers{})
+	got, err := e.expandPath(types.Identifiers{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got != "/api/v1/users" {
-		t.Fatalf("expected /api/v1/users, got %q", got)
+	if got != "/users" {
+		t.Fatalf("expected /users, got %q", got)
 	}
 }
 
 func TestFullPath_WithParams_ReturnsInterpolatedPath(t *testing.T) {
 	e := &pathEntry{templateFmt: "/users/%s", paramNames: []string{"id"}}
-	got, err := e.fullPath("/api/v1", types.Identifiers{"id": "42"})
+	got, err := e.expandPath(types.Identifiers{"id": "42"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got != "/api/v1/users/42" {
-		t.Fatalf("expected /api/v1/users/42, got %q", got)
+	if got != "/users/42" {
+		t.Fatalf("expected /users/42, got %q", got)
 	}
 }
 
 func TestFullPath_MultipleParams_ReturnsInterpolatedPath(t *testing.T) {
 	e := &pathEntry{templateFmt: "/orgs/%s/users/%s", paramNames: []string{"org", "id"}}
-	got, err := e.fullPath("", types.Identifiers{"org": "acme", "id": "7"})
+	got, err := e.expandPath(types.Identifiers{"org": "acme", "id": "7"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestFullPath_MultipleParams_ReturnsInterpolatedPath(t *testing.T) {
 
 func TestFullPath_WrongIDCount_ReturnsError(t *testing.T) {
 	e := &pathEntry{templateFmt: "/users/%s", paramNames: []string{"id"}}
-	_, err := e.fullPath("/api/v1", types.Identifiers{})
+	_, err := e.expandPath(types.Identifiers{})
 	if err == nil {
 		t.Fatal("expected error for wrong identifier count")
 	}
@@ -204,7 +204,7 @@ func TestFullPath_WrongIDCount_ReturnsError(t *testing.T) {
 
 func TestFullPath_MissingIDKey_ReturnsError(t *testing.T) {
 	e := &pathEntry{templateFmt: "/users/%s", paramNames: []string{"id"}}
-	_, err := e.fullPath("/api/v1", types.Identifiers{"other": "42"})
+	_, err := e.expandPath(types.Identifiers{"other": "42"})
 	if err == nil {
 		t.Fatal("expected error for missing identifier key")
 	}

@@ -7,19 +7,19 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
-// PathMethod selects which HTTP verbs are registered for a route entry.
-type PathMethod uint8
+// RestMethod selects which HTTP verbs are registered for a route entry.
+type RestMethod uint8
 
 const (
-	MethodCreate PathMethod = 1 << iota // POST  — collection
+	MethodCreate RestMethod = 1 << iota // POST  — collection
 	MethodList                          // GET   — collection
 	MethodGet                           // GET   — instance
 	MethodUpdate                        // PUT   — instance
 	MethodSave                          // PATCH — instance
 	MethodDelete                        // DELETE — instance
 
-	AllCollectionMethods PathMethod = MethodCreate | MethodList
-	AllInstanceMethods   PathMethod = MethodGet | MethodUpdate | MethodSave | MethodDelete
+	AllCollectionMethods RestMethod = MethodCreate | MethodList
+	AllInstanceMethods   RestMethod = MethodGet | MethodUpdate | MethodSave | MethodDelete
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 )
 
 // RepositoryOption configures restRepository construction.
-type RepositoryOption func(*repositoryOptions) error
+type RepositoryOption func(*repositoryOptions)
 
 // pathEntry stores a URL path template and the identifier names it requires.
 type pathEntry struct {
@@ -36,36 +36,34 @@ type pathEntry struct {
 	paramNames  []string
 }
 
-// fullPath constructs the full URL path by substituting args into the templateFmt.
-func (e *pathEntry) fullPath(basePath string, ids types.Identifiers) (string, error) {
-	if len(ids) != len(e.paramNames) {
-		return "", fmt.Errorf("expected %d identifiers for path template, got %d", len(e.paramNames), len(ids))
-	}
+// expandPath constructs the URL path by substituting identifiers into the templateFmt.
+// Note: it returns only the path portion (caller should prepend `basePath`).
+func (e *pathEntry) expandPath(ids types.Identifiers) (string, error) {
 	if len(e.paramNames) == 0 {
-		return basePath + e.templateFmt, nil // path sem parâmetros
+		return e.templateFmt, nil // path sem parâmetros
 	}
-	anyArgs := make([]any, len(ids))
+	anyArgs := make([]any, len(e.paramNames))
 	for i, name := range e.paramNames {
 		if id, ok := ids[name]; ok {
 			anyArgs[i] = id
 		} else {
-			return "", fmt.Errorf("missing identifier %q for path template", name)
+			return "", fmt.Errorf("identifiers: missing identifier %q for path template", name)
 		}
 	}
-	return basePath + fmt.Sprintf(e.templateFmt, anyArgs...), nil
+	return fmt.Sprintf(e.templateFmt, anyArgs...), nil
 }
 
 type repositoryOptions struct {
 	client   HttpClient
 	registry RestRegistry
 	basePath string
-	paths    map[PathMethod]*pathEntry
+	paths    map[RestMethod]*pathEntry
 	headers  http.Header
 }
 
 func newRepositoryOptions(opts ...RepositoryOption) *repositoryOptions {
 	o := &repositoryOptions{
-		paths: map[PathMethod]*pathEntry{
+		paths: map[RestMethod]*pathEntry{
 			MethodCreate: DefaultCollectionPathEntry,
 			MethodList:   DefaultCollectionPathEntry,
 			MethodGet:    DefaultInstancePathEntry,
@@ -77,9 +75,7 @@ func newRepositoryOptions(opts ...RepositoryOption) *repositoryOptions {
 		headers:  make(http.Header),
 	}
 	for _, opt := range opts {
-		if err := opt(o); err != nil {
-			panic(err.Error())
-		}
+		opt(o)
 	}
 	if o.client == nil {
 		panic(errRepositoryMissingHttpClient.Error())
@@ -89,60 +85,55 @@ func newRepositoryOptions(opts ...RepositoryOption) *repositoryOptions {
 
 // WithHttpClient sets the HttpClient used for HTTP transport. Required.
 func WithHttpClient(c HttpClient) RepositoryOption {
-	return func(o *repositoryOptions) error {
+	return func(o *repositoryOptions) {
 		if c == nil {
 			panic(errRepositoryMissingHttpClient.Error())
 		}
 		o.client = c
-		return nil
 	}
 }
 
 // WithRegistry sets the RestRegistry used for request/response marshaling.
 func WithRegistry(r RestRegistry) RepositoryOption {
-	return func(o *repositoryOptions) error {
+	return func(o *repositoryOptions) {
 		if r == nil {
 			panic(errRepositoryMissingRegistry.Error())
 		}
 		o.registry = r
-		return nil
 	}
 }
 
 // WithBasePath sets the path prefix common to all operations (e.g. "/api/v1/users").
 // The HttpClient is responsible for schema+host+port.
 func WithBasePath(basePath string) RepositoryOption {
-	return func(o *repositoryOptions) error {
+	return func(o *repositoryOptions) {
 		p, err := sanitizeAndValidatePath(basePath)
 		if err != nil {
 			panic(errRepositoryInvalidBasePath(err).Error())
 		}
 		o.basePath = p
-		return nil
 	}
 }
 
 // WithPath registers pathTemplate for the given methods.
-func WithPath(methods PathMethod, pathTemplate string) RepositoryOption {
-	return func(o *repositoryOptions) error {
+func WithPath(methods RestMethod, pathTemplate string) RepositoryOption {
+	return func(o *repositoryOptions) {
 		templateFmt, paramNames, err := extractPathParams(pathTemplate)
 		if err != nil {
 			panic(err.Error())
 		}
 		entry := &pathEntry{templateFmt: templateFmt, paramNames: paramNames}
-		for _, m := range []PathMethod{MethodCreate, MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete} {
+		for _, m := range []RestMethod{MethodCreate, MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete} {
 			if methods&m != 0 {
 				o.paths[m] = entry
 			}
 		}
-		return nil
 	}
 }
 
 // WithHeader adds a default request header sent on every operation.
 func WithHeader(key, value string) RepositoryOption {
-	return func(o *repositoryOptions) error {
+	return func(o *repositoryOptions) {
 		o.headers.Set(key, value)
-		return nil
 	}
 }

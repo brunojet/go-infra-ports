@@ -54,8 +54,8 @@ svc := myservice.New(repo)
 - Sem dependência nova em `go.mod`
 - HTTP method mapping hard-coded por operação (não configurável): `Create`→POST, `List`→GET, `Get`→GET, `Update`→PUT, `Save`→PATCH, `Delete`→DELETE
 - URL templates usam sintaxe `{key}` resolvida via `RequestContext.Identifiers`
-- `HttpClient` e `RestRegistry` são opções **obrigatórias**; `baseURL`, `paths`, `headers` são opcionais
-- `RepositoryOption` segue semântica `func(*repositoryOptions) error` (permite validação inline, ex.: `WithBaseURL` rejeitar string vazia)
+- `HttpClient` e `RestRegistry` são opções **obrigatórias**; `basePath`, `paths`, `headers` são opcionais
+- `RepositoryOption` é `func(*repositoryOptions)` — helpers de opção realizam validação e panicam em caso de entrada inválida (validação em tempo de construção)
 - `pkg/http_clients/` expõe apenas `contracts/` e `mocks/` — sem `api.go` (nenhuma factory neste repo)
 
 ---
@@ -75,22 +75,22 @@ svc := myservice.New(repo)
 | Arquivo | Conteúdo |
 |---|---|
 | `rest_repository_type.go` | Alias `HttpClient`, constantes `OperationCreate/List/Get/Update/Save/Delete`, struct `restRepository{client, registry, opts}` |
-| `rest_repository_config.go` | `RepositoryOption func(*repositoryOptions) error`, struct `repositoryOptions`, `newRepositoryOptions`, `WithHttpClient`, `WithRegistry`, `WithBaseURL`, `WithPath`, `WithHeader` |
+| `rest_repository_config.go` | `RepositoryOption func(*repositoryOptions)`, struct `repositoryOptions`, `newRepositoryOptions`, `WithHttpClient`, `WithRegistry`, `WithBasePath`, `WithPath`, `WithHeader` |
 | `rest_repository_error.go` | Sentinelas: `ErrMissingHttpClient`, `ErrMissingRegistry`, `ErrBuildRequest`, `ErrExecuteRequest`, `ErrReadResponseBody`, `ErrResolveRequest`, `ErrResolveResponse` + funções de wrap |
-| `rest_repository_helper.go` | `interpolatePath(template, Identifiers) string` (`{key}` → valor), `applyQueryParams(*url.URL, url.Values)` |
+| `rest_repository_helper.go` | `expandPath(template, Identifiers) string` (`{key}` → valor), `applyQueryParams(*url.URL, url.Values)` |
 
 ### Phase 2 — Internal: métodos locais e implementação
 
 | Arquivo | Conteúdo |
 |---|---|
 | `rest_repository_local.go` | Métodos privados: `resolveURL`, `buildHTTPRequest`, `executeRequest`, `readBody`, `mapResponse`, `mapResponses` |
-| `rest_repository.go` | `NewRestRepository(opts...) (RestRepository, error)`, 6 métodos da interface `RestRepository` |
+| `rest_repository.go` | `NewRestRepository(opts...) RestRepository` (panics on invalid or missing required options), 6 métodos da interface `RestRepository` |
 
 ### Phase 3 — API pública
 
 | Arquivo | Conteúdo |
 |---|---|
-| `pkg/repositories/api.go` *(modify)* | Adicionar: `HttpClient`, `RepositoryOption`, `NewRestRepository`, `WithHttpClient`, `WithRegistry`, `WithBaseURL`, `WithPath`, `WithHeader` |
+| `pkg/repositories/api.go` *(modify)* | Expor: `HttpClient`, `RepositoryOption`, `NewRestRepository`, `WithHttpClient`, `WithRegistryOpt` (facade), `WithBaseURL` (facade → maps to internal `WithBasePath`), `WithPath`, `WithRepositoryHeader` (facade → maps to internal `WithHeader`) |
 | `pkg/repositories/api_test.go` *(modify)* | Cobertura dos novos símbolos re-exportados |
 
 ### Phase 4 — Testes
@@ -100,7 +100,7 @@ svc := myservice.New(repo)
 | `rest_repository_type_test.go` | Constantes e struct |
 | `rest_repository_config_test.go` | Aplicação de options, erros de validação |
 | `rest_repository_error_test.go` | Sentinelas e wrapping |
-| `rest_repository_helper_test.go` | `interpolatePath`, `applyQueryParams` |
+| `rest_repository_helper_test.go` | `expandPath`, `applyQueryParams` |
 | `rest_repository_local_test.go` | `resolveURL`, `buildHTTPRequest`, `readBody`, `mapResponse` |
 | `rest_repository_test.go` | Table-driven, 6 operações, usando `MockHttpClient` + `MockRestRegistry` |
 
@@ -215,16 +215,16 @@ Implementar o adaptador concreto `restRepository` em rest que satisfaz a porta `
 
 ### Phase 1 — internal: tipos, config, erros, helpers
 4. Criar `internal/repositories/rest/rest_repository_type.go` — alias `HttpClient`, constantes `OperationCreate/List/Get/Update/Save/Delete`, struct `restRepository{client, registry, opts}`
-5. Criar `internal/repositories/rest/rest_repository_config.go` — `RepositoryOption func(*repositoryOptions) error`, struct `repositoryOptions`, `newRepositoryOptions`, `WithHttpClient`, `WithRegistry`, `WithBaseURL`, `WithPath`, `WithHeader`
+5. Criar `internal/repositories/rest/rest_repository_config.go` — `RepositoryOption func(*repositoryOptions)`, struct `repositoryOptions`, `newRepositoryOptions`, `WithHttpClient`, `WithRegistry`, `WithBasePath`, `WithPath`, `WithHeader`
 6. Criar `internal/repositories/rest/rest_repository_error.go` — erros sentinela (`ErrMissingHttpClient`, `ErrMissingRegistry`, `ErrBuildRequest`, `ErrExecuteRequest`, `ErrReadResponseBody`, `ErrResolveRequest`, `ErrResolveResponse`) + funções de wrap
-7. Criar `internal/repositories/rest/rest_repository_helper.go` — `interpolatePath(template, Identifiers) string` (`{key}` → valor), `applyQueryParams(*url.URL, url.Values)`
+7. Criar `internal/repositories/rest/rest_repository_helper.go` — `expandPath(template, Identifiers) string` (`{key}` → valor), `applyQueryParams(*url.URL, url.Values)`
 
 ### Phase 2 — internal: métodos locais e implementação principal *(depends on 4–7)*
 8. Criar `internal/repositories/rest/rest_repository_local.go` — métodos privados: `resolveURL`, `buildHTTPRequest`, `executeRequest`, `readBody`, `mapResponse`, `mapResponses`
 9. Criar `internal/repositories/rest/rest_repository.go` — `NewRestRepository(opts...) (RestRepository, error)`, 6 métodos (`Create`→POST, `List`→GET collection, `Get`→GET single, `Update`→PUT, `Save`→PATCH, `Delete`→DELETE)
 
 ### Phase 3 — API pública *(depends on 9)*
-10. Modificar api.go — adicionar `HttpClient`, `RepositoryOption`, `NewRestRepository`, `WithHttpClient`, `WithRegistry`, `WithBaseURL`, `WithPath`, `WithHeader`
+10. Modificar api.go — expor `HttpClient`, `RepositoryOption`, `NewRestRepository`, `WithHttpClient`, `WithRegistryOpt` (facade), `WithBaseURL` (facade → maps to internal `WithBasePath`), `WithPath`, `WithRepositoryHeader` (facade → maps to internal `WithHeader`)
 11. Atualizar api_test.go
 
 ### Phase 4 — arquivos de teste *(parallel, depends on each source file)*
@@ -254,5 +254,5 @@ Implementar o adaptador concreto `restRepository` em rest que satisfaz a porta `
 - `HttpClient` e `RestRegistry` são opções **obrigatórias**; demais são opcionais
 
 **Further Considerations**
-1. **Semântica de erro em `RepositoryOption`**: O padrão atual do projeto usa `func(*registryOptions)` (sem erro). `HttpClientOption` em go-infra-adapters usa `func(*config) error`. Recomendo: `func(*repositoryOptions) error` para permitir validação nas options (ex.: `WithBaseURL` rejeitar string vazia). Confirma?
+1. **Semântica de erro em `RepositoryOption`**: A implementação atual adotou `RepositoryOption func(*repositoryOptions)` e os helpers de opção validam e panicam em caso de entrada inválida (validação em tempo de construção). Se preferir evitar panics, considere alterar a API para `func(*repositoryOptions) error` para permitir validação controlada pelo chamador.
 2. **`pkg/http_clients/` público**: Apenas `contracts/` e `mocks/` por enquanto (sem api.go), já que não há factory neste repo. Confirma?You've used 95% of your weekly rate limit. Your weekly rate limit will reset on May 3 at 9:00 PM. [Learn More](https://aka.ms/github-copilot-rate-limit-error)

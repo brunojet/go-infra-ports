@@ -45,8 +45,8 @@ type DefaultRestRequest = rest.DefaultRestRequest
 // DefaultRestResponse provides a raw-body response spec default implementation.
 type DefaultRestResponse = rest.DefaultRestResponse
 
-// PathMethod aliases the path method type used for RestRepository path resolution.
-type PathMethod = rest.PathMethod
+// RestMethod aliases the path method type used for RestRepository path resolution.
+type RestMethod = rest.RestMethod
 
 // NewRestRegistry builds a REST registry with the provided options.
 func NewRestRegistry(options ...RegistryOption) RestRegistry {
@@ -117,7 +117,7 @@ func WithBaseURL(url string) RepositoryOption {
 
 // WithPath registers the URL path template for a given operation.
 // The required identifiers are extracted from the template and validated at runtime.
-func WithPath(methods PathMethod, pathTemplate string) RepositoryOption {
+func WithPath(methods RestMethod, pathTemplate string) RepositoryOption {
 	return rest.WithPath(methods, pathTemplate)
 }
 

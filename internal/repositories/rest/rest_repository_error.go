@@ -34,11 +34,11 @@ func errRepositoryInvalidBasePath(err error) error {
 	return fmt.Errorf("invalid basePath: %w", err)
 }
 
-func errRepositoryPathMethodNotConfiguredf(pathMethod PathMethod) error {
+func errRepositoryPathMethodNotConfiguredf(pathMethod RestMethod) error {
 	return fmt.Errorf("%w: %d", errRepositoryPathMethodNotConfigured, pathMethod)
 }
 
-func errRepositoryRequestBodyNilf(pathMethod PathMethod) error {
+func errRepositoryRequestBodyNilf(pathMethod RestMethod) error {
 	return fmt.Errorf("%w for operation %d", errRepositoryRequestBodyNil, pathMethod)
 }
 

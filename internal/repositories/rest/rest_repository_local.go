@@ -10,15 +10,16 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
-func (r *restRepository) resolveURL(pathMethod PathMethod, ids types.Identifiers, query url.Values) (string, error) {
+func (r *restRepository) resolveURL(pathMethod RestMethod, ids types.Identifiers, query url.Values) (string, error) {
 	entry, ok := r.opts.paths[pathMethod]
 	if !ok {
 		return "", errRepositoryPathMethodNotConfiguredf(pathMethod)
 	}
-	rawURL, err := entry.fullPath(r.opts.basePath, ids)
+	pathOnly, err := entry.expandPath(ids)
 	if err != nil {
 		return "", err
 	}
+	rawURL := r.opts.basePath + pathOnly
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return "", errRepositoryBuildRequest(err)
@@ -96,7 +97,7 @@ func (r *restRepository) mapResponses(status int, body []byte, out *RestResponse
 }
 
 // executeBodyRequest is the shared flow for Create, Update, and Save operations.
-func (r *restRepository) executeBodyRequest(ctx context.Context, pathMethod PathMethod, method string, request RestRequest) (*http.Response, error) {
+func (r *restRepository) executeBodyRequest(ctx context.Context, pathMethod RestMethod, method string, request RestRequest) (*http.Response, error) {
 	if request.Body == nil {
 		return nil, errRepositoryBuildRequest(errRepositoryRequestBodyNilf(pathMethod))
 	}
@@ -118,7 +119,7 @@ func (r *restRepository) executeBodyRequest(ctx context.Context, pathMethod Path
 	return r.executeRequest(ctx, req)
 }
 
-func (r *restRepository) executeNoBodyRequest(ctx context.Context, pathMethod PathMethod, method string, reqCtx types.RequestContext) (*http.Response, error) {
+func (r *restRepository) executeNoBodyRequest(ctx context.Context, pathMethod RestMethod, method string, reqCtx types.RequestContext) (*http.Response, error) {
 	rawURL, err := r.resolveURL(pathMethod, reqCtx.Identifiers, reqCtx.Query)
 	if err != nil {
 		return nil, err
