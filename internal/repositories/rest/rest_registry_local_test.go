@@ -10,15 +10,18 @@ import (
 
 func TestCloneConfig_CreatesIndependentMaps(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.Requests["x"] = &DefaultRestRequest{}
+	// use non-default keys to verify independence
+	keyX := RestMethod(99)
+	keyY := RestMethod(100)
+	registry.cfg.Requests[keyX] = &DefaultRestRequest{}
 
 	cloned := registry.cloneConfig()
-	if cloned.Requests["x"] == nil {
+	if cloned.Requests[keyX] == nil {
 		t.Fatal("expected cloned config to copy requests map")
 	}
 
-	cloned.Requests["y"] = &DefaultRestRequest{}
-	if registry.cfg.Requests["y"] != nil {
+	cloned.Requests[keyY] = &DefaultRestRequest{}
+	if registry.cfg.Requests[keyY] != nil {
 		t.Fatal("expected cloned config map to be independent from source")
 	}
 }
@@ -66,9 +69,12 @@ func TestResolveResponseSpec_ReturnsErrorWhenNil(t *testing.T) {
 
 func TestResolveRequestSpec_Hit(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.Requests[http.MethodPost] = &testLocalRequest{}
+	registry.cfg.Requests[MethodCreate] = &testLocalRequest{}
 
-	resolved := registry.resolveRequestSpec(http.MethodPost)
+	resolved, err := registry.newRequestSpec(MethodCreate)
+	if err != nil {
+		t.Fatalf("unexpected error for direct hit: %v", err)
+	}
 	if _, ok := resolved.(*testLocalRequest); !ok {
 		t.Fatalf("expected testLocalRequest for direct hit, got %T", resolved)
 	}
@@ -77,7 +83,10 @@ func TestResolveRequestSpec_Hit(t *testing.T) {
 func TestResolveRequestSpec_FallbackToDefault(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
 
-	resolved := registry.resolveRequestSpec(http.MethodPost)
+	resolved, err := registry.newRequestSpec(MethodCreate)
+	if err != nil {
+		t.Fatalf("unexpected error for fallback: %v", err)
+	}
 	if _, ok := resolved.(*DefaultRestRequest); !ok {
 		t.Fatalf("expected DefaultRestRequest fallback, got %T", resolved)
 	}
@@ -87,9 +96,9 @@ func TestResolveRequestSpec_FallbackToDefault(t *testing.T) {
 
 func TestResolveRequestEnvelopeSpec_Hit(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.RequestsEnvelopes[http.MethodPost] = &testLocalRequest{}
+	registry.cfg.RequestsEnvelopes[MethodCreate] = &testLocalRequest{}
 
-	resolved := registry.resolveRequestEnvelopeSpec(http.MethodPost)
+	resolved := registry.resolveRequestEnvelopeSpec(MethodCreate)
 	if _, ok := resolved.(*testLocalRequest); !ok {
 		t.Fatalf("expected testLocalRequest for direct hit, got %T", resolved)
 	}
@@ -97,18 +106,18 @@ func TestResolveRequestEnvelopeSpec_Hit(t *testing.T) {
 
 func TestResolveRequestEnvelopeSpec_FallbackToDefault(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.RequestsEnvelopes[DefaultMethodName] = &testLocalRequest{}
+	registry.cfg.RequestsEnvelopes[MethodCreate] = &testLocalRequest{}
 
-	resolved := registry.resolveRequestEnvelopeSpec(http.MethodPost)
+	resolved := registry.resolveRequestEnvelopeSpec(MethodCreate)
 	if _, ok := resolved.(*testLocalRequest); !ok {
-		t.Fatalf("expected testLocalRequest via DefaultMethodName fallback, got %T", resolved)
+		t.Fatalf("expected testLocalRequest via MethodCreate fallback, got %T", resolved)
 	}
 }
 
 func TestResolveRequestEnvelopeSpec_ReturnsNilWhenUnconfigured(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
 
-	resolved := registry.resolveRequestEnvelopeSpec(http.MethodPost)
+	resolved := registry.resolveRequestEnvelopeSpec(MethodCreate)
 	if resolved != nil {
 		t.Fatalf("expected nil when unconfigured, got %T", resolved)
 	}

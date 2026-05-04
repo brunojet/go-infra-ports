@@ -97,18 +97,18 @@ func (r *restRepository) mapResponses(status int, body []byte, out *RestResponse
 }
 
 // executeBodyRequest is the shared flow for Create, Update, and Save operations.
-func (r *restRepository) executeBodyRequest(ctx context.Context, pathMethod RestMethod, method string, request RestRequest) (*http.Response, error) {
+func (r *restRepository) executeBodyRequest(ctx context.Context, restMethod RestMethod, method string, request RestRequest) (*http.Response, error) {
 	if request.Body == nil {
-		return nil, errRepositoryBuildRequest(errRepositoryRequestBodyNilf(pathMethod))
+		return nil, errRepositoryBuildRequest(errRepositoryRequestBodyNilf(restMethod))
 	}
 	var body []byte
 	if err := r.registry.ResolveRequest(request.Body, &body); err != nil {
 		return nil, errRepositoryResolveRequest(err)
 	}
-	if err := r.registry.ResolveEnvelopeRequest(method, &body); err != nil {
+	if err := r.registry.ResolveEnvelopeRequest(restMethod, &body); err != nil {
 		return nil, errRepositoryResolveEnvelopeRequest(err)
 	}
-	rawURL, err := r.resolveURL(pathMethod, request.Context.Identifiers, request.Context.Query)
+	rawURL, err := r.resolveURL(restMethod, request.Context.Identifiers, request.Context.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +119,8 @@ func (r *restRepository) executeBodyRequest(ctx context.Context, pathMethod Rest
 	return r.executeRequest(ctx, req)
 }
 
-func (r *restRepository) executeNoBodyRequest(ctx context.Context, pathMethod RestMethod, method string, reqCtx types.RequestContext) (*http.Response, error) {
-	rawURL, err := r.resolveURL(pathMethod, reqCtx.Identifiers, reqCtx.Query)
+func (r *restRepository) executeNoBodyRequest(ctx context.Context, restMethod RestMethod, method string, reqCtx types.RequestContext) (*http.Response, error) {
+	rawURL, err := r.resolveURL(restMethod, reqCtx.Identifiers, reqCtx.Query)
 	if err != nil {
 		return nil, err
 	}

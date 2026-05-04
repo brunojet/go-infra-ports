@@ -45,9 +45,9 @@ func TestWithRedirectionAndProblemRegisterInProperMaps(t *testing.T) {
 
 func TestRegisterRequest_DefaultMethodWhenEmpty(t *testing.T) {
 	ro := newRegistryOptions()
-	ro.registerRequest(&DefaultRestRequest{}, ro.Requests)
-	if ro.Requests[DefaultMethodName] == nil {
-		t.Fatal("expected default method registration")
+	ro.registerRequest(&DefaultRestRequest{}, ro.Requests, MethodCreate)
+	if ro.Requests[MethodCreate] == nil {
+		t.Fatal("expected method registration for MethodCreate")
 	}
 }
 
@@ -58,7 +58,7 @@ func TestRegisterRequest_PanicsOnInvalidMethod(t *testing.T) {
 			t.Fatal("expected panic for invalid method")
 		}
 	}()
-	ro.registerRequest(&DefaultRestRequest{}, ro.Requests, http.MethodGet)
+	ro.registerRequest(&DefaultRestRequest{}, ro.Requests, MethodList)
 }
 
 func TestRegisterRequest_PanicsOnNilSpec(t *testing.T) {
@@ -68,7 +68,7 @@ func TestRegisterRequest_PanicsOnNilSpec(t *testing.T) {
 			t.Fatal("expected panic for nil request spec")
 		}
 	}()
-	ro.registerRequest(nil, ro.Requests, http.MethodPost)
+	ro.registerRequest(nil, ro.Requests, MethodCreate)
 }
 
 func TestRegisterResponse_DefaultStatusWhenEmpty(t *testing.T) {

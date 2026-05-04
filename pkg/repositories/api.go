@@ -6,8 +6,6 @@ import (
 )
 
 const (
-	// DefaultMethodName is the default key used by registry request mappings.
-	DefaultMethodName = rest.DefaultMethodName
 	// DefaultStatusCode is the default key used by registry response mappings.
 	DefaultStatusCode = rest.DefaultStatusCode
 )
@@ -53,14 +51,14 @@ func NewRestRegistry(options ...RegistryOption) RestRegistry {
 	return rest.NewRestRegistry(options...)
 }
 
-// WithRequest registers request specs for methods (or default method when empty).
-func WithRequest(spec RestRequestSpec, methods ...string) RegistryOption {
-	return rest.WithRequest(spec, methods...)
+// WithRequest registers request specs for methods.
+func WithRequest(spec RestRequestSpec, methods rest.RestMethod) RegistryOption {
+	return rest.WithRequest(spec, methods)
 }
 
 // WithRequestEnvelope registers request envelope specs for methods.
-func WithRequestEnvelope(spec RestRequestSpec, methods ...string) RegistryOption {
-	return rest.WithRequestEnvelope(spec, methods...)
+func WithRequestEnvelope(spec RestRequestSpec, methods rest.RestMethod) RegistryOption {
+	return rest.WithRequestEnvelope(spec, methods)
 }
 
 // WithResponse registers 2xx response specs (or default status when empty).

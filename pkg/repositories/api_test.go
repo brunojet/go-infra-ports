@@ -76,8 +76,8 @@ func TestRegistryOptions_ReturnOptions(t *testing.T) {
 	env := &testEnvelopeSpec{}
 
 	opts := []RegistryOption{
-		WithRequest(req, http.MethodPost),
-		WithRequestEnvelope(req, http.MethodPost),
+		WithRequest(req, restcontracts.MethodCreate),
+		WithRequestEnvelope(req, restcontracts.MethodCreate),
 		WithResponse(resp, http.StatusOK),
 		WithResponseEnvelope(env, http.StatusOK),
 		WithInformation(resp, http.StatusContinue),

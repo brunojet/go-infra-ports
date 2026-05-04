@@ -8,6 +8,25 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
+// RestMethod selects which HTTP verbs are registered for a route entry.
+// It is used as a bitmask combining method constants (e.g. MethodCreate,
+// MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete).
+type RestMethod uint8
+
+// Method constants define named bitmask values used to register request
+// and path methods in the REST registry and repository APIs.
+const (
+	MethodCreate         RestMethod = 1 << iota // POST  — collection
+	MethodList                                  // GET   — collection
+	MethodGet                                   // GET   — instance
+	MethodUpdate                                // PUT   — instance
+	MethodSave                                  // PATCH — instance
+	MethodDelete                                // DELETE — instance
+	AllWriteMethods      RestMethod = MethodCreate | MethodUpdate | MethodSave
+	AllCollectionMethods RestMethod = MethodCreate | MethodList
+	AllInstanceMethods   RestMethod = MethodGet | MethodUpdate | MethodSave | MethodDelete
+)
+
 // RestRequestSpec defines the request payload contract resolved by RestRegistry.
 //
 // Implementations are responsible for carrying decoded request payload data and
@@ -58,7 +77,7 @@ type RestRegistry interface {
 	// ResolveRequest marshals a request spec into requestBody.
 	ResolveRequest(body RestRequestSpec, requestBody *[]byte) error
 	// ResolveEnvelopeRequest envelopes the current request body in place.
-	ResolveEnvelopeRequest(name string, dataBody *[]byte) error
+	ResolveEnvelopeRequest(method RestMethod, dataBody *[]byte) error
 	// ResolveResponse unmarshals a single response payload into body.
 	ResolveResponse(status int, responseBody []byte, body *RestResponseSpec) error
 	// ResolveResponses unmarshals a collection response payload into bodies.
@@ -67,7 +86,7 @@ type RestRegistry interface {
 	ResolveEnvelopeResponse(status int, dataBody *[]byte, meta *types.ResponseMeta) error
 	// NewRequestSpec allocates a request spec instance for service layer usage.
 	// Returns an error if the spec's New method returns nil.
-	NewRequestSpec(name string) (RestRequestSpec, error)
+	NewRequestSpec(method RestMethod) (RestRequestSpec, error)
 	// ReleaseRequestSpec releases a request spec instance used by the service layer.
 	ReleaseRequestSpec(spec RestRequestSpec)
 }

@@ -12,7 +12,7 @@ import (
 func TestMergeRegistryOptions_CopiesAllMaps(t *testing.T) {
 	dst := newRegistryOptions()
 	src := newRegistryOptions()
-	src.Requests["m"] = &DefaultRestRequest{}
+	src.Requests[MethodCreate] = &DefaultRestRequest{}
 	src.Responses[201] = &DefaultRestResponse{}
 	src.ResponseEnvelopes[201] = &responseEnvelope{}
 	src.Informations[101] = &DefaultRestResponse{}
@@ -21,7 +21,7 @@ func TestMergeRegistryOptions_CopiesAllMaps(t *testing.T) {
 
 	mergeRegistryOptions(dst, src)
 
-	if dst.Requests["m"] == nil || dst.Responses[201] == nil || dst.ResponseEnvelopes[201] == nil {
+	if dst.Requests[MethodCreate] == nil || dst.Responses[201] == nil || dst.ResponseEnvelopes[201] == nil {
 		t.Fatal("expected merged config to include request/response maps")
 	}
 	if dst.Informations[101] == nil || dst.Redirections[301] == nil || dst.Problems[400] == nil {

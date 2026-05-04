@@ -49,8 +49,8 @@ func TestResolveResponsesErrorBuilders(t *testing.T) {
 }
 
 func TestRegisterErrorBuilders(t *testing.T) {
-	errMethod := errRestRegisterRequestInvalidMethod("GET")
-	if !strings.Contains(errMethod.Error(), "invalid method") || !strings.Contains(errMethod.Error(), "GET") {
+	errMethod := errRestRegisterRequestInvalidMethod(MethodList)
+	if !strings.Contains(errMethod.Error(), "invalid method") {
 		t.Fatalf("unexpected method error: %v", errMethod)
 	}
 
