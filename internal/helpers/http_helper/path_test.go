@@ -45,6 +45,31 @@ func TestSanitizeAndValidatePath(t *testing.T) {
 			wantErr: errPathInvalidStructure,
 		},
 		{
+			name:    "traversal double dot",
+			input:   "/valid/ok/../../hacking",
+			wantErr: errPathTraversal,
+		},
+		{
+			name:    "traversal single dot",
+			input:   "/valid/./ok",
+			wantErr: errPathTraversal,
+		},
+		{
+			name:    "traversal at end",
+			input:   "/valid/ok/..",
+			wantErr: errPathTraversal,
+		},
+		{
+			name:    "segment starting with dot rejected",
+			input:   "/valid/.hidden",
+			wantErr: errPathInvalidStructure,
+		},
+		{
+			name:  "dot in middle of segment allowed",
+			input: "/api/v1.0/users",
+			want:  "/api/v1.0/users",
+		},
+		{
 			name:  "normalizes trailing slash",
 			input: "/api/v1/users/",
 			want:  "/api/v1/users",
@@ -132,6 +157,11 @@ func TestPathParamsFmt(t *testing.T) {
 			input: "/users/{id}/orders/{orderId}",
 			want:  "/users/%s/orders/%s",
 		},
+		{
+			name:  "segment with dot",
+			input: "/api/v1.0/{id}",
+			want:  "/api/v1.0/%s",
+		},
 	}
 
 	for _, tt := range tests {
@@ -188,6 +218,11 @@ func TestExtractPathParams(t *testing.T) {
 			name:      "max params exactly",
 			input:     "/{a}/{b}/{c}/{d}/{e}/{f}/{g}/{h}",
 			wantNames: []string{"a", "b", "c", "d", "e", "f", "g", "h"},
+		},
+		{
+			name:      "segment with dot",
+			input:     "/api/v1.0/{id}",
+			wantNames: []string{"id"},
 		},
 	}
 

@@ -12,17 +12,31 @@ const (
 )
 
 var (
-	// allowed chars: letters, digits, underscore, hyphen, braces and slashes
+	// allowed chars: letters, digits, underscore, hyphen, dot, braces and slashes.
 	// Leading slash is optional: the helper will normalize and insert it.
-	allowedCharsRegex = regexp.MustCompile(`^/?[A-Za-z0-9_/\-\{\}]*$`)
-	// validPathRegex: segments are either plain tokens or {param} (no :param support)
+	// Dot is allowed here but traversal segments (./ and ../) are rejected by containsTraversal.
+	allowedCharsRegex = regexp.MustCompile(`^/?[A-Za-z0-9_/\-\{\}.]*$`)
+	// validPathRegex: segments are plain tokens (may contain dot but cannot start with it) or {param}.
 	// Accept root '/' explicitly to match net/http patterns.
-	validPathRegex = regexp.MustCompile(`^/$|^(/([A-Za-z0-9_-]+|\{[A-Za-z0-9_]+\}))+$`)
+	validPathRegex = regexp.MustCompile(`^/$|^(/([A-Za-z0-9_-][A-Za-z0-9_\-.]*|\{[A-Za-z0-9_]+\}))+$`)
 	// templateRegex captures {name} — group 1 is always non-empty (+ quantifier).
+	// validPathRegex rejects empty braces before this point.
 	templateRegex = regexp.MustCompile(`\{([A-Za-z0-9_]+)\}`)
 )
 
-// SanitizeAndValidatePath trims whitespace, checks for emptiness, validates allowed characters and structure, and normalizes the path.
+// containsTraversal reports whether p contains any . or .. segment.
+// Must be called before path.Clean, which would silently resolve traversal.
+func containsTraversal(p string) bool {
+	for _, seg := range strings.Split(p, "/") {
+		if seg == "." || seg == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+// SanitizeAndValidatePath trims whitespace, checks for emptiness, validates
+// allowed characters and structure, rejects traversal, and normalizes the path.
 func SanitizeAndValidatePath(template string) (string, error) {
 	p := strings.TrimSpace(template)
 	switch {
@@ -32,6 +46,8 @@ func SanitizeAndValidatePath(template string) (string, error) {
 		return "", errPathTooLongf(p, maxPathLen)
 	case !allowedCharsRegex.MatchString(p):
 		return "", errPathInvalidCharsf(p)
+	case containsTraversal(p):
+		return "", errPathTraversalf(p)
 	}
 	p = "/" + strings.TrimPrefix(strings.TrimSuffix(path.Clean(p), "/"), "/")
 	if !validPathRegex.MatchString(p) {
@@ -48,7 +64,7 @@ func PathParamsFmt(template string) (string, error) {
 	return templateRegex.ReplaceAllString(sanitized, "%s"), nil
 }
 
-// ExtractPathParams validates the template and extracts parameter names, returning a format string with %s placeholders.
+// ExtractPathParams validates the template and extracts parameter names.
 func ExtractPathParams(template string) (names []string, err error) {
 	sanitized, err := SanitizeAndValidatePath(template)
 	if err != nil {

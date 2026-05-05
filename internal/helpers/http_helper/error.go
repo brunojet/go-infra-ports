@@ -12,6 +12,7 @@ var (
 	errPathTooLong             = errors.New("path length exceeds maximum")
 	errPathInvalidChars        = errors.New("path has invalid characters")
 	errPathInvalidStructure    = errors.New("path has invalid structure")
+	errPathTraversal           = errors.New("path traversal not allowed")
 	errInvalidPathTemplateErr  = errors.New("invalid path template")
 	errPathParametersExceedMax = errors.New("number of path parameters exceeds maximum")
 )
@@ -26,6 +27,10 @@ func errPathInvalidCharsf(p string) error {
 
 func errPathInvalidStructuref(p string) error {
 	return fmt.Errorf("%w: %q", errPathInvalidStructure, p)
+}
+
+func errPathTraversalf(p string) error {
+	return fmt.Errorf("%w: %q", errPathTraversal, p)
 }
 
 func errInvalidPathTemplate(err error) error {
