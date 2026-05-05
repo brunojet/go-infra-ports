@@ -25,15 +25,14 @@ func TestSanitizePath(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"users", "users"},
-		{"/users", "users"},
-		{"users/", "users"},
-		{"/users/", "users"},
-		{"//users//", "users"},
-		{"users/{id}", "users/{id}"},
-		{"/users/{id}/", "users/{id}"},
-		{"//users//{id}//", "users/{id}"},
-		{"", ""},
+		{"users", "/users"},
+		{"/users", "/users"},
+		{"users/", "/users"},
+		{"/users/", "/users"},
+		{"//users//", "/users"},
+		{"users/{id}", "/users/{id}"},
+		{"/users/{id}/", "/users/{id}"},
+		{"//users//{id}//", "/users/{id}"},
 	}
 	for _, tc := range cases {
 		got := sanitizePath(tc.input)
@@ -41,4 +40,13 @@ func TestSanitizePath(t *testing.T) {
 			t.Errorf("sanitizePath(%q) = %q, want %q", tc.input, got, tc.want)
 		}
 	}
+}
+
+func TestSanitizePathPanicsOnEmpty(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("expected panic on empty input")
+		}
+	}()
+	_ = sanitizePath("")
 }

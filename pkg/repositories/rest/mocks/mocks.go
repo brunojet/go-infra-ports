@@ -11,7 +11,7 @@ import (
 
 	contracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 	types "github.com/brunojet/go-infra-ports/pkg/types"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRestRequestSpec is a mock of RestRequestSpec interface.

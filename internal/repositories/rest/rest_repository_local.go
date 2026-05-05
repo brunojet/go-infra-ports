@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
@@ -24,7 +25,7 @@ func (r *restRepository) resolveURL(pathMethod RestMethod, ids types.Identifiers
 	if err != nil {
 		return "", errRepositoryBuildRequest(err)
 	}
-	applyQueryParams(u, query)
+	http_util.ApplyQueryParams(u, query)
 	return u.String(), nil
 }
 
@@ -45,8 +46,8 @@ func (r *restRepository) buildHTTPRequest(ctx context.Context, method, rawURL st
 // Sets Content-Type: application/json when hasBody is true and the caller has not already provided one.
 func (r *restRepository) applyHeaderParams(reqHeaders http.Header, hasBody bool) http.Header {
 	merged := make(http.Header, len(r.opts.headers)+len(reqHeaders))
-	applyHeaderParams(merged, r.opts.headers)
-	applyHeaderParams(merged, reqHeaders)
+	http_util.ApplyHeaderParams(merged, r.opts.headers)
+	http_util.ApplyHeaderParams(merged, reqHeaders)
 	if hasBody && merged.Get("Content-Type") == "" {
 		merged.Set("Content-Type", "application/json")
 	}

@@ -3,7 +3,6 @@ package net_http
 import (
 	"encoding/json"
 	"errors"
-	"maps"
 	"net/http"
 	"net/url"
 
@@ -15,24 +14,24 @@ import (
 func register(mux *http.ServeMux, opts handlerOptions, h httpHandlerFuncs) {
 	if c := opts.collection; c != nil {
 		if c.methods&MethodCreate != 0 {
-			registerRoute(mux, "POST /"+c.path, http.HandlerFunc(h.Create), opts)
+			registerRoute(mux, "POST "+c.path, http.HandlerFunc(h.Create), opts)
 		}
 		if c.methods&MethodList != 0 {
-			registerRoute(mux, "GET /"+c.path, http.HandlerFunc(h.List), opts)
+			registerRoute(mux, "GET "+c.path, http.HandlerFunc(h.List), opts)
 		}
 	}
 	if i := opts.instance; i != nil {
 		if i.methods&MethodGet != 0 {
-			registerRoute(mux, "GET /"+i.path, http.HandlerFunc(h.Get), opts)
+			registerRoute(mux, "GET "+i.path, http.HandlerFunc(h.Get), opts)
 		}
 		if i.methods&MethodUpdate != 0 {
-			registerRoute(mux, "PUT /"+i.path, http.HandlerFunc(h.Update), opts)
+			registerRoute(mux, "PUT "+i.path, http.HandlerFunc(h.Update), opts)
 		}
 		if i.methods&MethodSave != 0 {
-			registerRoute(mux, "PATCH /"+i.path, http.HandlerFunc(h.Save), opts)
+			registerRoute(mux, "PATCH "+i.path, http.HandlerFunc(h.Save), opts)
 		}
 		if i.methods&MethodDelete != 0 {
-			registerRoute(mux, "DELETE /"+i.path, http.HandlerFunc(h.Delete), opts)
+			registerRoute(mux, "DELETE "+i.path, http.HandlerFunc(h.Delete), opts)
 		}
 	}
 }
@@ -77,16 +76,27 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, entry *routeEnt
 		return false
 	}
 	// Avoid modifying the original maps in ctx, which may be shared between requests.
-	// Ensure the destination maps are allocated with the correct named types
-	// before copying values from the request.
+	// At the handler edge we must deep-clone request headers and query values to
+	// avoid aliasing with the underlying `r` maps. If `ctx` already contains
+	// maps, copy into them and overwrite by key; otherwise allocate a cloned
+	// map for efficiency.
 	if ctx.Headers == nil {
-		ctx.Headers = make(http.Header, len(r.Header))
+		ctx.Headers = r.Header.Clone()
+	} else {
+		for k, vs := range r.Header {
+			ctx.Headers[k] = append([]string(nil), vs...)
+		}
 	}
 	if ctx.Query == nil {
 		ctx.Query = make(url.Values, len(r.URL.Query()))
+		for k, vs := range r.URL.Query() {
+			ctx.Query[k] = append([]string(nil), vs...)
+		}
+	} else {
+		for k, vs := range r.URL.Query() {
+			ctx.Query[k] = append([]string(nil), vs...)
+		}
 	}
-	maps.Copy(ctx.Headers, r.Header)
-	maps.Copy(ctx.Query, r.URL.Query())
 	return true
 }
 

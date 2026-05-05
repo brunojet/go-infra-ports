@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 
 	contracts "github.com/brunojet/go-infra-ports/pkg/services/rest/contracts"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRestUpstreamMapper is a mock of RestUpstreamMapper interface.

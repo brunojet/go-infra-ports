@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/brunojet/go-infra-ports/internal/dtos"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"

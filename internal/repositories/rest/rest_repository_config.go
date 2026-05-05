@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
@@ -92,7 +93,7 @@ func WithRegistry(r RestRegistry) RepositoryOption {
 // The HttpClient is responsible for schema+host+port.
 func WithBasePath(basePath string) RepositoryOption {
 	return func(o *repositoryOptions) {
-		p, err := sanitizeAndValidatePath(basePath)
+		p, err := http_util.SanitizeAndValidatePath(basePath)
 		if err != nil {
 			panic(errRepositoryInvalidBasePath(err).Error())
 		}
@@ -103,7 +104,7 @@ func WithBasePath(basePath string) RepositoryOption {
 // WithPath registers pathTemplate for the given methods.
 func WithPath(methods RestMethod, pathTemplate string) RepositoryOption {
 	return func(o *repositoryOptions) {
-		templateFmt, paramNames, err := extractPathParams(pathTemplate)
+		templateFmt, paramNames, err := http_util.ExtractPathParams(pathTemplate)
 		if err != nil {
 			panic(err.Error())
 		}

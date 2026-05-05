@@ -1,31 +1,49 @@
 package net_http
 
 import (
-	"path"
 	"regexp"
-	"strings"
+
+	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
 )
 
 // sanitizePath normaliza um path de rota: remove barras duplas, leading e trailing slash.
-// Usa path.Clean (semântica URL) para garantir compatibilidade com http.ServeMux.
+// Usa o helper central `http_util.SanitizeAndValidatePath` para validação.
+// OBS: a validação completa é delegada ao helper — entradas vazias ou inválidas
+// provocarão panic (o helper retorna erro para entradas vazias).
 func sanitizePath(p string) string {
-	return strings.Trim(path.Clean("/"+p), "/")
+	s, err := http_util.SanitizeAndValidatePath(p)
+	if err != nil {
+		panic("net_http: invalid path: " + err.Error())
+	}
+	return s
 }
 
-// extractParams extrai os nomes dos {params} do pathFmt e associa os regexes
-// posicionalmente. O número de params é definido pelo próprio pathFmt.
+// extractParams extracts the {params} names from pathFmt and associates
+// positional regexes. Uses `http_util.ExtractPathParams` for validation and
+// extraction; `formats` are assigned in positional order.
 func extractParams(pathFmt string, formats []*regexp.Regexp) []paramFormat {
-	var params []paramFormat
-	idx := 0
-	for _, seg := range strings.Split(pathFmt, "/") {
-		if strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}") {
-			pf := paramFormat{name: seg[1 : len(seg)-1]}
-			if idx < len(formats) {
-				pf.format = formats[idx]
-			}
-			params = append(params, pf)
-			idx++
+	// Delegate template validation/extraction to `http_util.ExtractPathParams`.
+	// It returns a sanitized format (with %s placeholders) and the parameter
+	// names in positional order. We then map those names to the package-local
+	// `paramFormat` type and apply positional regexes from `formats`. This
+	// keeps `http_util` decoupled from `net_http` types while centralizing
+	// template validation/normalization.
+	_, names, err := http_util.ExtractPathParams(pathFmt)
+	if err != nil {
+		panic("net_http: invalid path template: " + err.Error())
+	}
+	lenFmts := len(formats)
+	lenNames := len(names)
+	if lenFmts > 0 && lenFmts != lenNames {
+		panic("net_http: number of formats does not match number of parameters in path template")
+	}
+	params := make([]paramFormat, 0, lenNames)
+	for i, name := range names {
+		pf := paramFormat{name: name}
+		if i < lenFmts {
+			pf.format = formats[i]
 		}
+		params = append(params, pf)
 	}
 	return params
 }

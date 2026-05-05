@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	mocksvc "github.com/brunojet/go-infra-ports/pkg/services/mocks"

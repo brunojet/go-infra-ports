@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	internalnethttp "github.com/brunojet/go-infra-ports/internal/handlers/net_http"
 	mocksvc "github.com/brunojet/go-infra-ports/pkg/services/mocks"

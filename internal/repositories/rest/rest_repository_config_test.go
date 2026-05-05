@@ -3,7 +3,7 @@ package rest
 import (
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/brunojet/go-infra-ports/pkg/http_clients/mocks"
 	"github.com/brunojet/go-infra-ports/pkg/types"

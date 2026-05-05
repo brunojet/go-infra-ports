@@ -11,7 +11,7 @@ import (
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewRestService_WithNilRepository_ReturnsError(t *testing.T) {
