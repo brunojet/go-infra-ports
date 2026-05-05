@@ -3,7 +3,7 @@ package net_http
 import (
 	"regexp"
 
-	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
+	http_helper "github.com/brunojet/go-infra-ports/internal/helpers/http_helper"
 )
 
 // sanitizePath normaliza um path de rota: remove barras duplas, leading e trailing slash.
@@ -11,7 +11,7 @@ import (
 // OBS: a validação completa é delegada ao helper — entradas vazias ou inválidas
 // provocarão panic (o helper retorna erro para entradas vazias).
 func sanitizePath(p string) string {
-	s, err := http_util.SanitizeAndValidatePath(p)
+	s, err := http_helper.SanitizeAndValidatePath(p)
 	if err != nil {
 		panic("net_http: invalid path: " + err.Error())
 	}
@@ -28,7 +28,7 @@ func extractParams(pathFmt string, formats []*regexp.Regexp) []paramFormat {
 	// `paramFormat` type and apply positional regexes from `formats`. This
 	// keeps `http_util` decoupled from `net_http` types while centralizing
 	// template validation/normalization.
-	_, names, err := http_util.ExtractPathParams(pathFmt)
+	names, err := http_helper.ExtractPathParams(pathFmt)
 	if err != nil {
 		panic("net_http: invalid path template: " + err.Error())
 	}

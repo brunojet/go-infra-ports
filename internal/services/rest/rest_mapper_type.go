@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
+	"github.com/brunojet/go-infra-ports/internal/helpers/http_helper"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/rest/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
@@ -45,8 +45,7 @@ func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamQuery(reqQuery, upsQuery url
 }
 
 func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamHeaders(reqHeader, upsHeader http.Header) error {
-	http_util.ApplyHeaderParams(upsHeader, reqHeader)
-	return nil
+	return http_helper.ApplyHeaderParams(upsHeader, reqHeader)
 }
 
 type DefaultRestDownstreamMapper[R any] struct{}
@@ -57,8 +56,7 @@ func (m *DefaultRestDownstreamMapper[R]) ToDownstreamStatusCode(statusCode int, 
 }
 
 func (m *DefaultRestDownstreamMapper[R]) ToDownstreamHeaders(upsHeader, downstreamHeader http.Header) error {
-	http_util.ApplyHeaderParams(downstreamHeader, upsHeader)
-	return nil
+	return http_helper.ApplyHeaderParams(downstreamHeader, upsHeader)
 }
 
 func (m *DefaultRestDownstreamMapper[R]) ToDownstreamResponse(upsPayload any, payload *R) error {

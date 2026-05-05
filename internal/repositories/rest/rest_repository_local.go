@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	http_util "github.com/brunojet/go-infra-ports/internal/helpers/http_util"
+	"github.com/brunojet/go-infra-ports/internal/helpers/http_helper"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
@@ -25,7 +25,9 @@ func (r *restRepository) resolveURL(pathMethod RestMethod, ids types.Identifiers
 	if err != nil {
 		return "", errRepositoryBuildRequest(err)
 	}
-	http_util.ApplyQueryParams(u, query)
+	if err := http_helper.ApplyQueryParams(u, query); err != nil {
+		return "", errRepositoryBuildRequest(err)
+	}
 	return u.String(), nil
 }
 
@@ -38,20 +40,28 @@ func (r *restRepository) buildHTTPRequest(ctx context.Context, method, rawURL st
 	if err != nil {
 		return nil, errRepositoryBuildRequest(err)
 	}
-	req.Header = r.applyHeaderParams(reqHeaders, len(body) > 0)
+	hdrs, err := r.applyHeaderParams(reqHeaders, len(body) > 0)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = hdrs
 	return req, nil
 }
 
 // applyHeaderParams merges config-level and request-level headers, with request taking precedence.
 // Sets Content-Type: application/json when hasBody is true and the caller has not already provided one.
-func (r *restRepository) applyHeaderParams(reqHeaders http.Header, hasBody bool) http.Header {
+func (r *restRepository) applyHeaderParams(reqHeaders http.Header, hasBody bool) (http.Header, error) {
 	merged := make(http.Header, len(r.opts.headers)+len(reqHeaders))
-	http_util.ApplyHeaderParams(merged, r.opts.headers)
-	http_util.ApplyHeaderParams(merged, reqHeaders)
+	if err := http_helper.ApplyHeaderParams(merged, r.opts.headers); err != nil {
+		return nil, errRepositoryBuildRequest(err)
+	}
+	if err := http_helper.ApplyHeaderParams(merged, reqHeaders); err != nil {
+		return nil, errRepositoryBuildRequest(err)
+	}
 	if hasBody && merged.Get("Content-Type") == "" {
 		merged.Set("Content-Type", "application/json")
 	}
-	return merged
+	return merged, nil
 }
 
 func (r *restRepository) executeRequest(ctx context.Context, req *http.Request) (*http.Response, error) {

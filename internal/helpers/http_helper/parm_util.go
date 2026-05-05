@@ -1,4 +1,4 @@
-package http_util
+package http_helper
 
 import (
 	"maps"
@@ -19,9 +19,12 @@ import (
 //     merge values manually without sorting.
 //   - Complexity: per-key sort dominates (O(m log m) for m values of a key).
 //   - The function modifies `u` in-place.
-func ApplyQueryParams(u *url.URL, q url.Values) {
+func ApplyQueryParams(u *url.URL, q url.Values) error {
+	if u == nil {
+		return errNilURL
+	}
 	if len(q) == 0 {
-		return
+		return nil
 	}
 	existing := u.Query()
 	for key, values := range q {
@@ -30,6 +33,7 @@ func ApplyQueryParams(u *url.URL, q url.Values) {
 		existing[key] = slices.Compact(existing[key])
 	}
 	u.RawQuery = existing.Encode()
+	return nil
 }
 
 // ApplyHeaderParams merges headers from `src` into `dst`.
@@ -58,9 +62,13 @@ func ApplyQueryParams(u *url.URL, q url.Values) {
 //     for k, vs := range q { q2[k] = append([]string(nil), vs...) }
 //
 //   - `src` takes precedence on key conflicts (it will overwrite keys in `dst`).
-func ApplyHeaderParams(dst, src http.Header) {
+func ApplyHeaderParams(dst, src http.Header) error {
+	if dst == nil {
+		return errNilDstHeader
+	}
 	if len(src) == 0 {
-		return
+		return nil
 	}
 	maps.Copy(dst, src)
+	return nil
 }
