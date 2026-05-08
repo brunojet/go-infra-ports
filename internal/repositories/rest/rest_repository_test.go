@@ -34,7 +34,7 @@ func newMockClient(t *testing.T, statusCode int, body string) (*mocks.MockHttpCl
 func newTestRepo(t *testing.T, client HttpClient) RestRepository {
 	t.Helper()
 	reg := NewRestRegistry(
-		WithResponse(&DefaultRestResponse{}, http.StatusOK, http.StatusCreated, http.StatusNoContent),
+		WithResponseOf[DefaultRestResponse](http.StatusOK, http.StatusCreated, http.StatusNoContent),
 	)
 	return NewRestRepository(
 		WithHttpClient(client),
@@ -75,9 +75,13 @@ func TestCreate_SendsPOSTAndMapsResponse(t *testing.T) {
 	repo := newTestRepo(t, mock)
 
 	resp := &RestResponse{}
+	reqBody := NewDataSpecOf[DefaultRestRequest]()
+	if err := reqBody.SetBody(json.RawMessage(`{"name":"x"}`)); err != nil {
+		t.Fatalf("SetBody failed: %v", err)
+	}
 	err := repo.Create(context.Background(), RestRequest{
 		Context: types.RequestContext{},
-		Body:    &DefaultRestRequest{Body: json.RawMessage(`{"name":"x"}`)},
+		Data:    reqBody,
 	}, resp)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -147,9 +151,13 @@ func TestUpdate_SendsPUT(t *testing.T) {
 	repo := newTestRepo(t, mock)
 
 	out := &RestResponse{}
+	reqBody := NewDataSpecOf[DefaultRestRequest]()
+	if err := reqBody.SetBody(json.RawMessage(`{}`)); err != nil {
+		t.Fatalf("SetBody failed: %v", err)
+	}
 	if err := repo.Update(context.Background(), RestRequest{
 		Context: types.RequestContext{Identifiers: types.Identifiers{"id": "1"}},
-		Body:    &DefaultRestRequest{Body: json.RawMessage(`{}`)},
+		Data:    reqBody,
 	}, out); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -170,9 +178,13 @@ func TestSave_SendsPATCH(t *testing.T) {
 	repo := newTestRepo(t, mock)
 
 	out := &RestResponse{}
+	reqBody := NewDataSpecOf[DefaultRestRequest]()
+	if err := reqBody.SetBody(json.RawMessage(`{}`)); err != nil {
+		t.Fatalf("SetBody failed: %v", err)
+	}
 	if err := repo.Save(context.Background(), RestRequest{
 		Context: types.RequestContext{Identifiers: types.Identifiers{"id": "2"}},
-		Body:    &DefaultRestRequest{Body: json.RawMessage(`{}`)},
+		Data:    reqBody,
 	}, out); err != nil {
 		t.Fatalf("Save: %v", err)
 	}

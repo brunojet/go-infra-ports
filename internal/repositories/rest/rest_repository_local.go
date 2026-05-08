@@ -25,7 +25,7 @@ func (r *restRepository) resolveURL(pathMethod RestMethod, ids types.Identifiers
 	if err != nil {
 		return "", errRepositoryBuildRequest(err)
 	}
-	if err := http_helper.ApplyQueryParams(u, query); err != nil {
+	if err := http_helper.ApplyURLQueryParams(u, query); err != nil {
 		return "", errRepositoryBuildRequest(err)
 	}
 	return u.String(), nil
@@ -109,11 +109,11 @@ func (r *restRepository) mapResponses(status int, body []byte, out *RestResponse
 
 // executeBodyRequest is the shared flow for Create, Update, and Save operations.
 func (r *restRepository) executeBodyRequest(ctx context.Context, restMethod RestMethod, method string, request RestRequest) (*http.Response, error) {
-	if request.Body == nil {
+	if request.Data == nil {
 		return nil, errRepositoryBuildRequest(errRepositoryRequestBodyNilf(restMethod))
 	}
 	var body []byte
-	if err := r.registry.ResolveRequest(request.Body, &body); err != nil {
+	if err := r.registry.ResolveRequest(request.Data, &body); err != nil {
 		return nil, errRepositoryResolveRequest(err)
 	}
 	if err := r.registry.ResolveEnvelopeRequest(restMethod, &body); err != nil {

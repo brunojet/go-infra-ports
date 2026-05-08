@@ -1,13 +1,14 @@
 package http_helper
 
 import (
+	"fmt"
 	"maps"
 	"net/http"
 	"net/url"
 	"slices"
 )
 
-// ApplyQueryParams merges the provided query values `q` into `u`'s existing
+// ApplyURLQueryParams merges the provided query values `q` into `u`'s existing
 // query string in-place and encodes the result into `u.RawQuery`.
 // Behavior notes:
 //   - For each key, incoming values are appended to existing values, then the
@@ -19,20 +20,30 @@ import (
 //     merge values manually without sorting.
 //   - Complexity: per-key sort dominates (O(m log m) for m values of a key).
 //   - The function modifies `u` in-place.
-func ApplyQueryParams(u *url.URL, q url.Values) error {
+func ApplyURLQueryParams(u *url.URL, q url.Values) error {
 	if u == nil {
 		return errNilURL
 	}
-	if len(q) == 0 {
-		return nil
-	}
 	existing := u.Query()
-	for key, values := range q {
-		existing[key] = append(existing[key], values...)
-		slices.Sort(existing[key])
-		existing[key] = slices.Compact(existing[key])
+	if err := ApplyQueryParams(existing, q); err != nil {
+		return fmt.Errorf("failed to apply query params: %w", err)
 	}
 	u.RawQuery = existing.Encode()
+	return nil
+}
+
+func ApplyQueryParams(dst, src url.Values) error {
+	if dst == nil {
+		return fmt.Errorf("destination query values cannot be nil")
+	}
+	if len(src) == 0 {
+		return nil
+	}
+	for key, values := range src {
+		dst[key] = append(dst[key], values...)
+		slices.Sort(dst[key])
+		dst[key] = slices.Compact(dst[key])
+	}
 	return nil
 }
 

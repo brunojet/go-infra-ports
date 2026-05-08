@@ -65,3 +65,20 @@ func (r *restRepository) Delete(ctx context.Context, reqCtx types.RequestContext
 	}
 	return r.resolveResponse(resp, response)
 }
+
+func (r *restRepository) NewRequest(method RestMethod) (*RestRequest, error) {
+	spec, err := r.registry.NewRequestSpec(method)
+	if err != nil {
+		return nil, err
+	}
+	return &RestRequest{
+		Context: types.NewRequestContext(),
+		Data:    spec,
+	}, nil
+}
+
+func (r *restRepository) NewResponse() *RestResponse {
+	return &RestResponse{
+		Context: types.NewResponseContext(),
+	}
+}

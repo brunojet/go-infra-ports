@@ -3,13 +3,13 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
 	rpocts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
-	svcrestcts "github.com/brunojet/go-infra-ports/pkg/services/rest/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
 
@@ -17,9 +17,9 @@ import (
 
 type apiTestResponse struct{ ID string }
 
-func (r *apiTestResponse) New() rpocts.RestResponseSpec { return &apiTestResponse{} }
-func (r *apiTestResponse) NewSlice(n int) []rpocts.RestResponseSpec {
-	out := make([]rpocts.RestResponseSpec, n)
+func (r *apiTestResponse) New() rpocts.RestDataSpec { return &apiTestResponse{} }
+func (r *apiTestResponse) NewSlice(n int) []rpocts.RestDataSpec {
+	out := make([]rpocts.RestDataSpec, n)
 	for i := range out {
 		out[i] = &apiTestResponse{}
 	}
@@ -28,21 +28,89 @@ func (r *apiTestResponse) NewSlice(n int) []rpocts.RestResponseSpec {
 func (r *apiTestResponse) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, (*struct{ ID string })(r))
 }
+func (r *apiTestResponse) MarshalJSON() ([]byte, error) { return json.Marshal(*r) }
+func (r *apiTestResponse) SetBody(body any) error {
+	if body == nil {
+		*r = apiTestResponse{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *apiTestResponse:
+		*r = *v
+		return nil
+	case apiTestResponse:
+		*r = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (r *apiTestResponse) Body() any { return *r }
 
 type apiTestCreate struct{ Name string }
 
-func (c *apiTestCreate) New() rpocts.RestRequestSpec      { return &apiTestCreate{} }
-func (c *apiTestCreate) SetBody(_ rpocts.RestRequestSpec) {}
+func (c *apiTestCreate) New() rpocts.RestDataSpec { return &apiTestCreate{} }
+func (c *apiTestCreate) NewSlice(n int) []rpocts.RestDataSpec {
+	out := make([]rpocts.RestDataSpec, n)
+	for i := range out {
+		out[i] = &apiTestCreate{}
+	}
+	return out
+}
+func (c *apiTestCreate) SetBody(body any) error {
+	if body == nil {
+		*c = apiTestCreate{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *apiTestCreate:
+		*c = *v
+		return nil
+	case apiTestCreate:
+		*c = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (c *apiTestCreate) Body() any                       { return *c }
+func (c *apiTestCreate) MarshalJSON() ([]byte, error)    { return json.Marshal(*c) }
+func (c *apiTestCreate) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, c) }
 
 type apiTestUpdate struct{ Name string }
 
-func (u *apiTestUpdate) New() rpocts.RestRequestSpec      { return &apiTestUpdate{} }
-func (u *apiTestUpdate) SetBody(_ rpocts.RestRequestSpec) {}
+func (u *apiTestUpdate) New() rpocts.RestDataSpec { return &apiTestUpdate{} }
+func (u *apiTestUpdate) NewSlice(n int) []rpocts.RestDataSpec {
+	out := make([]rpocts.RestDataSpec, n)
+	for i := range out {
+		out[i] = &apiTestUpdate{}
+	}
+	return out
+}
+func (u *apiTestUpdate) SetBody(body any) error {
+	if body == nil {
+		*u = apiTestUpdate{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *apiTestUpdate:
+		*u = *v
+		return nil
+	case apiTestUpdate:
+		*u = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (u *apiTestUpdate) Body() any                       { return *u }
+func (u *apiTestUpdate) MarshalJSON() ([]byte, error)    { return json.Marshal(*u) }
+func (u *apiTestUpdate) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, u) }
 
 // apiStubRepo is a minimal RestRepository that returns a configured 2xx response.
 type apiStubRepo struct {
 	statusCode int
-	data       rpocts.RestResponseSpec
+	data       rpocts.RestDataSpec
 }
 
 func (r *apiStubRepo) Create(_ context.Context, _ rpocts.RestRequest, resp *rpocts.RestResponse) error {
@@ -54,7 +122,7 @@ func (r *apiStubRepo) Create(_ context.Context, _ rpocts.RestRequest, resp *rpoc
 func (r *apiStubRepo) List(_ context.Context, _ types.RequestContext, resp *rpocts.RestResponses) error {
 	resp.Context = types.ResponseContext{StatusCode: r.statusCode}
 	if r.data != nil {
-		resp.Data = []rpocts.RestResponseSpec{r.data}
+		resp.Data = []rpocts.RestDataSpec{r.data}
 	}
 	return nil
 }
@@ -80,6 +148,29 @@ func (r *apiStubRepo) Save(_ context.Context, _ rpocts.RestRequest, resp *rpocts
 func (r *apiStubRepo) Delete(_ context.Context, _ types.RequestContext, resp *rpocts.RestResponse) error {
 	resp.Context = types.ResponseContext{StatusCode: r.statusCode}
 	return nil
+}
+
+func (r *apiStubRepo) NewRequest(method rpocts.RestMethod) (*rpocts.RestRequest, error) {
+	req := &rpocts.RestRequest{Context: types.RequestContext{}}
+	switch method {
+	case rpocts.MethodCreate, rpocts.MethodSave:
+		req.Data = &apiTestCreate{}
+	case rpocts.MethodUpdate:
+		req.Data = &apiTestUpdate{}
+	default:
+		req.Data = &apiTestCreate{}
+	}
+	return req, nil
+}
+
+func (r *apiStubRepo) NewResponse() *rpocts.RestResponse {
+	return &rpocts.RestResponse{
+		Context:     types.ResponseContext{},
+		Information: &apiTestResponse{},
+		Redirection: &apiTestResponse{},
+		Problem:     &apiTestResponse{},
+		Data:        &apiTestResponse{},
+	}
 }
 
 // --- NewRestService ---
@@ -169,7 +260,7 @@ func TestWithDownstreamMapper_AppliedToService(t *testing.T) {
 func TestDefaultRestUpstreamMapper_ToUpstreamPost(t *testing.T) {
 	m := &DefaultRestUpstreamMapper[apiTestCreate, apiTestUpdate]{}
 	payload := apiTestCreate{Name: "x"}
-	var spec svcrestcts.RestRequestSpec
+	var spec any
 	if err := m.ToUpstreamPost(payload, nil, &spec); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -178,7 +269,7 @@ func TestDefaultRestUpstreamMapper_ToUpstreamPost(t *testing.T) {
 func TestDefaultRestUpstreamMapper_ToUpstreamPut(t *testing.T) {
 	m := &DefaultRestUpstreamMapper[apiTestCreate, apiTestUpdate]{}
 	payload := apiTestCreate{Name: "y"}
-	var spec svcrestcts.RestRequestSpec
+	var spec any
 	if err := m.ToUpstreamPut(payload, nil, &spec); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -187,7 +278,7 @@ func TestDefaultRestUpstreamMapper_ToUpstreamPut(t *testing.T) {
 func TestDefaultRestUpstreamMapper_ToUpstreamPatch(t *testing.T) {
 	m := &DefaultRestUpstreamMapper[apiTestCreate, apiTestUpdate]{}
 	payload := apiTestUpdate{Name: "z"}
-	var spec svcrestcts.RestRequestSpec
+	var spec any
 	if err := m.ToUpstreamPatch(payload, nil, &spec); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -244,7 +335,7 @@ func TestDefaultRestDownstreamMapper_ToDownstreamHeaders(t *testing.T) {
 
 func TestDefaultRestDownstreamMapper_ToDownstreamResponse(t *testing.T) {
 	m := &DefaultRestDownstreamMapper[apiTestResponse]{}
-	src := &apiTestResponse{ID: "99"}
+	src := apiTestResponse{ID: "99"}
 	var dst apiTestResponse
 	if err := m.ToDownstreamResponse(src, &dst); err != nil {
 		t.Fatalf("unexpected error: %v", err)

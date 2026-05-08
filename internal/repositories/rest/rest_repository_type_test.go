@@ -6,7 +6,7 @@ import (
 	"github.com/brunojet/go-infra-ports/pkg/http_clients/mocks"
 )
 
-func TestRestRepositoryStruct_ImplementsRestRepository(t *testing.T) {
+func TestRestRepositoryStruct_ImplementsRestRepositoryV2(t *testing.T) {
 	var _ RestRepository = (*restRepository)(nil)
 }
 

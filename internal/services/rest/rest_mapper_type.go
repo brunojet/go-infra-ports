@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"maps"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -18,30 +18,32 @@ type (
 
 type DefaultRestUpstreamMapper[C, U any] struct{}
 
-func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPost(payload C, ids Identifiers, upsPayload *svccts.RestRequestSpec) error {
-	if spec, ok := any(payload).(svccts.RestRequestSpec); ok {
-		*upsPayload = spec
+func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPost(payload C, ids Identifiers, upsPayload *any) error {
+	if upsPayload == nil {
+		return fmt.Errorf("%s: upsPayload cannot be nil", "ToUpstreamPost")
 	}
+	*upsPayload = payload
 	return nil
 }
 
-func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPut(payload C, ids Identifiers, upsPayload *svccts.RestRequestSpec) error {
-	if spec, ok := any(payload).(svccts.RestRequestSpec); ok {
-		*upsPayload = spec
+func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPut(payload C, ids Identifiers, upsPayload *any) error {
+	if upsPayload == nil {
+		return fmt.Errorf("%s: upsPayload cannot be nil", "ToUpstreamPut")
 	}
+	*upsPayload = payload
 	return nil
 }
 
-func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPatch(payload U, ids Identifiers, upsPayload *svccts.RestRequestSpec) error {
-	if spec, ok := any(payload).(svccts.RestRequestSpec); ok {
-		*upsPayload = spec
+func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamPatch(payload U, ids Identifiers, upsPayload *any) error {
+	if upsPayload == nil {
+		return fmt.Errorf("%s: upsPayload cannot be nil", "ToUpstreamPatch")
 	}
+	*upsPayload = payload
 	return nil
 }
 
 func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamQuery(reqQuery, upsQuery url.Values) error {
-	maps.Copy(upsQuery, reqQuery)
-	return nil
+	return http_helper.ApplyQueryParams(upsQuery, reqQuery)
 }
 
 func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamHeaders(reqHeader, upsHeader http.Header) error {
@@ -50,43 +52,45 @@ func (m *DefaultRestUpstreamMapper[C, U]) ToUpstreamHeaders(reqHeader, upsHeader
 
 type DefaultRestDownstreamMapper[R any] struct{}
 
-func (m *DefaultRestDownstreamMapper[R]) ToDownstreamStatusCode(statusCode int, downstreamStatusCode *int) error {
-	*downstreamStatusCode = statusCode
+func (m *DefaultRestDownstreamMapper[R]) ToDownstreamStatusCode(statusCode int, dwsStatusCode *int) error {
+	if dwsStatusCode == nil {
+		return fmt.Errorf("ToDownstreamStatusCode: dwsStatusCode cannot be nil")
+	}
+	*dwsStatusCode = statusCode
 	return nil
 }
 
-func (m *DefaultRestDownstreamMapper[R]) ToDownstreamHeaders(upsHeader, downstreamHeader http.Header) error {
-	return http_helper.ApplyHeaderParams(downstreamHeader, upsHeader)
+func (m *DefaultRestDownstreamMapper[R]) ToDownstreamHeaders(upsHeader, dwsHeader http.Header) error {
+	return http_helper.ApplyHeaderParams(dwsHeader, upsHeader)
 }
 
 func (m *DefaultRestDownstreamMapper[R]) ToDownstreamResponse(upsPayload any, payload *R) error {
-	// Try direct type assertion first (for value types)
+	if payload == nil {
+		return fmt.Errorf("ToDownstreamResponse: payload cannot be nil")
+	}
+	// Simple, strict behavior: upstream payload must be exactly the same
+	// type as the downstream generic `R`. No reflection or pointer/value
+	// coercion is performed — if types differ, return an error.
 	if casted, ok := upsPayload.(R); ok {
 		*payload = casted
 		return nil
 	}
 
-	// Try pointer type assertion (for pointer types)
-	castedPtr, ok := upsPayload.(*R)
-	if !ok {
-		return errRestDownstreamMapperResponseTypeAssertion
-	}
-	*payload = *castedPtr
-	return nil
-}
-
-func (m *DefaultRestDownstreamMapper[R]) ToDownstreamInformation(statusCode int, upsPayload RestResponseSpec, serviceMeta *svccts.ServiceMeta) error {
-	return nil
+	return fmt.Errorf("ToDownstreamResponse: failed to cast upsPayload to target type")
 }
 
 func (m *DefaultRestDownstreamMapper[R]) ToDownstreamResponseMeta(_ svccts.ResponseMeta, _ *svccts.ServiceMeta) error {
 	return nil
 }
 
-func (m *DefaultRestDownstreamMapper[R]) ToDownstreamRedirection(statusCode int, upsPayload RestResponseSpec, serviceMeta *svccts.ServiceMeta) error {
+func (m *DefaultRestDownstreamMapper[R]) ToDownstreamInformation(statusCode int, upsPayload any, serviceMeta *svccts.ServiceMeta) error {
 	return nil
 }
 
-func (m *DefaultRestDownstreamMapper[R]) ToDownstreamProblem(statusCode int, upsPayload RestResponseSpec, serviceMeta *svccts.ServiceMeta) error {
+func (m *DefaultRestDownstreamMapper[R]) ToDownstreamRedirection(statusCode int, upsPayload any, serviceMeta *svccts.ServiceMeta) error {
+	return nil
+}
+
+func (m *DefaultRestDownstreamMapper[R]) ToDownstreamProblem(statusCode int, upsPayload any, serviceMeta *svccts.ServiceMeta) error {
 	return nil
 }

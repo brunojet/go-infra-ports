@@ -49,7 +49,8 @@ func TestResolveResponsesErrorBuilders(t *testing.T) {
 }
 
 func TestRegisterErrorBuilders(t *testing.T) {
-	errMethod := errRestRegisterRequestInvalidMethod(MethodList)
+	// Pass a zero-value RestMethod to avoid depending on external constants
+	errMethod := errRestRegisterRequestInvalidMethod(RestMethod(0))
 	if !strings.Contains(errMethod.Error(), "invalid method") {
 		t.Fatalf("unexpected method error: %v", errMethod)
 	}

@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	repcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	repcts "github.com/brunojet/go-infra-ports/pkg/repositories"
 	repmocks "github.com/brunojet/go-infra-ports/pkg/repositories/rest/mocks"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
@@ -477,6 +477,7 @@ func TestRestService_Get_ContextMappingError_ReturnsError(t *testing.T) {
 }
 
 func TestRestService_Update_ContextMappingError_ReturnsError(t *testing.T) {
+
 	repo := &statusMockRepository{statusCode: 200, data: &testResponse{ID: "1"}}
 	svc, _ := NewRestService[testCreatePayload, testResponse, testUpdatePayload](repo, WithUpstreamMapper[testCreatePayload, testUpdatePayload](&queryErrUpstreamMapper{}))
 

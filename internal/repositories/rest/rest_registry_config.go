@@ -4,31 +4,35 @@ import (
 	"net/http"
 )
 
+const defaultStatusCode = 0
+
 type registryOptions struct {
-	Requests          map[RestMethod]RestRequestSpec
-	RequestsEnvelopes map[RestMethod]RestRequestSpec
-	Responses         map[int]RestResponseSpec
-	ResponseEnvelopes map[int]RestEnvelopeSpec
-	Informations      map[int]RestResponseSpec
-	Redirections      map[int]RestResponseSpec
-	Problems          map[int]RestResponseSpec
+	requests          map[RestMethod]RestDataSpec
+	requestsEnvelopes map[RestMethod]RestEnvelopeSpec
+	responses         map[int]RestDataSpec
+	responseEnvelopes map[int]RestEnvelopeSpec
+	informations      map[int]RestDataSpec
+	redirections      map[int]RestDataSpec
+	problems          map[int]RestDataSpec
 }
 
 type RegistryOption func(*registryOptions)
 
 func newRegistryOptions() *registryOptions {
+	reqDefault := NewDataSpecOf[DefaultRestRequest]()
+	respDefault := NewDataSpecOf[DefaultRestResponse]()
 	return &registryOptions{
-		Requests: map[RestMethod]RestRequestSpec{
-			MethodCreate: &DefaultRestRequest{},
-			MethodUpdate: &DefaultRestRequest{},
-			MethodSave:   &DefaultRestRequest{},
+		requests: map[RestMethod]RestDataSpec{
+			MethodCreate: reqDefault,
+			MethodUpdate: reqDefault,
+			MethodSave:   reqDefault,
 		},
-		RequestsEnvelopes: make(map[RestMethod]RestRequestSpec),
-		Responses:         map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
-		ResponseEnvelopes: make(map[int]RestEnvelopeSpec),
-		Informations:      map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
-		Redirections:      map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
-		Problems:          map[int]RestResponseSpec{DefaultStatusCode: &DefaultRestResponse{}},
+		requestsEnvelopes: make(map[RestMethod]RestEnvelopeSpec),
+		responses:         map[int]RestDataSpec{defaultStatusCode: respDefault},
+		responseEnvelopes: make(map[int]RestEnvelopeSpec),
+		informations:      map[int]RestDataSpec{defaultStatusCode: respDefault},
+		redirections:      map[int]RestDataSpec{defaultStatusCode: respDefault},
+		problems:          map[int]RestDataSpec{defaultStatusCode: respDefault},
 	}
 }
 
@@ -40,15 +44,11 @@ func newRegistryConfig(options ...RegistryOption) *registryOptions {
 	return cfg
 }
 
-func (o *registryOptions) registerRequest(spec RestRequestSpec, target map[RestMethod]RestRequestSpec, methods RestMethod) {
+func (o *registryOptions) registerRequest(spec RestDataSpec, target map[RestMethod]RestDataSpec, methods RestMethod) {
 	if spec == nil {
 		panic(errRestRegisterRequestSpecNil)
 	}
-	if methods == 0 {
-		panic(errRestRegisterRequestMethodsEmpty)
-	}
-	// Methods must include at least one write method (POST/PUT/PATCH)
-	if methods&AllWriteMethods == 0 {
+	if methods&allWriteMethods == 0 {
 		panic(errRestRegisterRequestInvalidMethod(methods))
 	}
 	for _, method := range writeMethodsList {
@@ -58,15 +58,15 @@ func (o *registryOptions) registerRequest(spec RestRequestSpec, target map[RestM
 	}
 }
 
-func (o *registryOptions) registerResponse(spec RestResponseSpec, target map[int]RestResponseSpec, firstStatusCode, lastStatusCode int, statusCodes ...int) {
+func (o *registryOptions) registerResponse(spec RestDataSpec, target map[int]RestDataSpec, firstStatusCode, lastStatusCode int, statusCodes ...int) {
 	if spec == nil {
 		panic(errRestRegisterResponseSpecNil)
 	}
 	if len(statusCodes) == 0 {
-		statusCodes = []int{DefaultStatusCode}
+		statusCodes = []int{defaultStatusCode}
 	}
 	for _, code := range statusCodes {
-		if code == DefaultStatusCode {
+		if code == defaultStatusCode {
 			target[code] = spec
 			continue
 		}
@@ -82,55 +82,69 @@ func (o *registryOptions) registerResponseEnvelope(spec RestEnvelopeSpec, status
 		panic(errRestRegisterResponseSpecNil)
 	}
 	if len(statusCodes) == 0 {
-		o.ResponseEnvelopes[DefaultStatusCode] = spec
+		o.responseEnvelopes[defaultStatusCode] = spec
 		return
 	}
 	for _, code := range statusCodes {
-		if code != DefaultStatusCode && (code < http.StatusOK || code > http.StatusOK+99) {
+		if code != defaultStatusCode && (code < http.StatusOK || code > http.StatusOK+99) {
 			panic(errRestRegisterResponseOutOfRange(code, http.StatusOK, http.StatusOK+99))
 		}
-		o.ResponseEnvelopes[code] = spec
+		o.responseEnvelopes[code] = spec
 	}
 }
 
-func WithRequest(spec RestRequestSpec, methods RestMethod) RegistryOption {
+func WithRequestOf[T any](methods RestMethod) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerRequest(spec, ro.Requests, methods)
+		spec := NewDataSpecOf[T]()
+		ro.registerRequest(spec, ro.requests, methods)
 	}
 }
 
-func WithRequestEnvelope(spec RestRequestSpec, methods RestMethod) RegistryOption {
+func WithRequestEnvelope(dataField string, methods RestMethod) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerRequest(spec, ro.RequestsEnvelopes, methods)
+		if methods&allWriteMethods == 0 {
+			panic(errRestRegisterRequestInvalidMethod(methods))
+		}
+		spec := NewEnvelopeSpec(dataField, "")
+		for _, method := range writeMethodsList {
+			if methods&method != 0 {
+				ro.requestsEnvelopes[method] = spec
+			}
+		}
 	}
 }
 
-func WithResponse(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+func WithResponseOf[T any](statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerResponse(spec, ro.Responses, http.StatusOK, http.StatusOK+99, statusCodes...)
+		spec := NewDataSpecOf[T]()
+		ro.registerResponse(spec, ro.responses, http.StatusOK, http.StatusOK+99, statusCodes...)
 	}
 }
 
-func WithResponseEnvelope(spec RestEnvelopeSpec, statusCodes ...int) RegistryOption {
+func WithResponseEnvelope(dataField, metaField string, statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
+		spec := NewEnvelopeSpec(dataField, metaField)
 		ro.registerResponseEnvelope(spec, statusCodes...)
 	}
 }
 
-func WithInformation(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+func WithInformationOf[T any](statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerResponse(spec, ro.Informations, http.StatusContinue, http.StatusContinue+99, statusCodes...)
+		spec := NewDataSpecOf[T]()
+		ro.registerResponse(spec, ro.informations, http.StatusContinue, http.StatusContinue+99, statusCodes...)
 	}
 }
 
-func WithRedirection(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+func WithRedirectionOf[T any](statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerResponse(spec, ro.Redirections, http.StatusMultipleChoices, http.StatusMultipleChoices+99, statusCodes...)
+		spec := NewDataSpecOf[T]()
+		ro.registerResponse(spec, ro.redirections, http.StatusMultipleChoices, http.StatusMultipleChoices+99, statusCodes...)
 	}
 }
 
-func WithProblem(spec RestResponseSpec, statusCodes ...int) RegistryOption {
+func WithProblemOf[T any](statusCodes ...int) RegistryOption {
 	return func(ro *registryOptions) {
-		ro.registerResponse(spec, ro.Problems, http.StatusBadRequest, http.StatusBadRequest+199, statusCodes...)
+		spec := NewDataSpecOf[T]()
+		ro.registerResponse(spec, ro.problems, http.StatusBadRequest, http.StatusBadRequest+199, statusCodes...)
 	}
 }

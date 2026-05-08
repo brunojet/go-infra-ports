@@ -12,19 +12,21 @@ import (
 func TestMergeRegistryOptions_CopiesAllMaps(t *testing.T) {
 	dst := newRegistryOptions()
 	src := newRegistryOptions()
-	src.Requests[MethodCreate] = &DefaultRestRequest{}
-	src.Responses[201] = &DefaultRestResponse{}
-	src.ResponseEnvelopes[201] = &responseEnvelope{}
-	src.Informations[101] = &DefaultRestResponse{}
-	src.Redirections[301] = &DefaultRestResponse{}
-	src.Problems[400] = &DefaultRestResponse{}
+	reqDefault := NewDataSpecOf[DefaultRestRequest]()
+	respDefault := NewDataSpecOf[DefaultRestResponse]()
+	src.requests[MethodCreate] = reqDefault
+	src.responses[201] = respDefault
+	src.responseEnvelopes[201] = NewEnvelopeSpec("data", "meta")
+	src.informations[101] = respDefault
+	src.redirections[301] = respDefault
+	src.problems[400] = respDefault
 
 	mergeRegistryOptions(dst, src)
 
-	if dst.Requests[MethodCreate] == nil || dst.Responses[201] == nil || dst.ResponseEnvelopes[201] == nil {
+	if dst.requests[MethodCreate] == nil || dst.responses[201] == nil || dst.responseEnvelopes[201] == nil {
 		t.Fatal("expected merged config to include request/response maps")
 	}
-	if dst.Informations[101] == nil || dst.Redirections[301] == nil || dst.Problems[400] == nil {
+	if dst.informations[101] == nil || dst.redirections[301] == nil || dst.problems[400] == nil {
 		t.Fatal("expected merged config to include status class maps")
 	}
 }
@@ -32,7 +34,7 @@ func TestMergeRegistryOptions_CopiesAllMaps(t *testing.T) {
 // --- resolveResponseInstance ---
 
 func TestResolveResponseInstance_Success(t *testing.T) {
-	instance, err := resolveResponseInstance(&DefaultRestResponse{})
+	instance, err := resolveResponseInstance(NewDataSpecOf[DefaultRestResponse]())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -51,7 +53,7 @@ func TestResolveResponseInstance_ReturnsErrorWhenNewReturnsNil(t *testing.T) {
 // --- resolveResponseSlice ---
 
 func TestResolveResponseSlice_ReturnsCorrectLength(t *testing.T) {
-	resolved, err := resolveResponseSlice(&DefaultRestResponse{}, 3)
+	resolved, err := resolveResponseSlice(NewDataSpecOf[DefaultRestResponse](), 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -70,22 +72,22 @@ func TestResolveResponseSlice_ReturnsErrorOnLengthMismatch(t *testing.T) {
 // --- resolveResponseSpec (free function) ---
 
 func TestResolveResponseSpec_HitByStatus(t *testing.T) {
-	source := map[int]RestResponseSpec{
-		DefaultStatusCode:  &DefaultRestResponse{},
-		http.StatusCreated: &testResponse{},
+	source := map[int]RestDataSpec{
+		defaultStatusCode:  NewDataSpecOf[DefaultRestResponse](),
+		http.StatusCreated: NewDataSpecOf[sampleT](),
 	}
 	resolved := resolveResponseSpec(http.StatusCreated, source)
-	if _, ok := resolved.(*testResponse); !ok {
-		t.Fatalf("expected testResponse for direct hit, got %T", resolved)
+	if _, ok := resolved.(*dataSpecOf[sampleT]); !ok {
+		t.Fatalf("expected dataSpecOf[sampleT] for direct hit, got %T", resolved)
 	}
 }
 
 func TestResolveResponseSpec_FallbackToDefault(t *testing.T) {
-	source := map[int]RestResponseSpec{
-		DefaultStatusCode: &DefaultRestResponse{},
+	source := map[int]RestDataSpec{
+		defaultStatusCode: NewDataSpecOf[DefaultRestResponse](),
 	}
 	resolved := resolveResponseSpec(http.StatusOK, source)
-	if _, ok := resolved.(*DefaultRestResponse); !ok {
+	if _, ok := resolved.(*dataSpecOf[DefaultRestResponse]); !ok {
 		t.Fatalf("expected DefaultRestResponse fallback, got %T", resolved)
 	}
 }
@@ -136,10 +138,18 @@ func TestUnmarshalInto_Error(t *testing.T) {
 
 type nilNewSpec struct{}
 
-func (n *nilNewSpec) New() RestResponseSpec             { return nil }
-func (n *nilNewSpec) NewSlice(_ int) []RestResponseSpec { return nil }
+func (n *nilNewSpec) New() RestDataSpec             { return nil }
+func (n *nilNewSpec) NewSlice(_ int) []RestDataSpec { return nil }
+func (n *nilNewSpec) SetBody(_ any) error           { return nil }
+func (n *nilNewSpec) Body() any                     { return nil }
+func (n *nilNewSpec) MarshalJSON() ([]byte, error)  { return json.Marshal(nil) }
+func (n *nilNewSpec) UnmarshalJSON(_ []byte) error  { return nil }
 
 type badSliceSpec struct{}
 
-func (b *badSliceSpec) New() RestResponseSpec             { return &badSliceSpec{} }
-func (b *badSliceSpec) NewSlice(_ int) []RestResponseSpec { return []RestResponseSpec{} }
+func (b *badSliceSpec) New() RestDataSpec             { return &badSliceSpec{} }
+func (b *badSliceSpec) NewSlice(_ int) []RestDataSpec { return []RestDataSpec{} }
+func (b *badSliceSpec) SetBody(_ any) error           { return nil }
+func (b *badSliceSpec) Body() any                     { return nil }
+func (b *badSliceSpec) MarshalJSON() ([]byte, error)  { return json.Marshal(nil) }
+func (b *badSliceSpec) UnmarshalJSON(_ []byte) error  { return nil }

@@ -19,10 +19,9 @@ var (
 	errRestResolveEnvelopeResponseMetaNil    = errors.New("rest: resolve envelope response: meta must not be nil")
 	errRestResolveEnvelopeResponseSpecNewNil = errors.New("rest: resolve envelope response: spec New returned nil")
 
-	errRestRegisterRequestSpecNil      = errors.New("rest: registerRequest: spec must not be nil")
-	errRestRegisterResponseSpecNil     = errors.New("rest: registerResponse: spec must not be nil")
-	errRestNewRequestSpecNil           = errors.New("rest: NewRequestSpec: spec New returned nil")
-	errRestRegisterRequestMethodsEmpty = errors.New("rest: registerRequest: at least one method must be specified")
+	errRestRegisterRequestSpecNil  = errors.New("rest: registerRequest: spec must not be nil")
+	errRestRegisterResponseSpecNil = errors.New("rest: registerResponse: spec must not be nil")
+	errRestNewRequestSpecNil       = errors.New("rest: NewRequestSpec: spec New returned nil")
 )
 
 func errRestResolveRequestMarshal(err error) error {

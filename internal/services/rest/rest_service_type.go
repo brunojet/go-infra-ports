@@ -1,7 +1,7 @@
 package rest
 
 import (
-	repcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	repcts "github.com/brunojet/go-infra-ports/pkg/repositories"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )

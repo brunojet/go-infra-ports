@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	repcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	repcts "github.com/brunojet/go-infra-ports/pkg/repositories"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
@@ -66,7 +66,7 @@ type informationErrDownstreamMapper struct {
 	DefaultRestDownstreamMapper[testResponse]
 }
 
-func (m *informationErrDownstreamMapper) ToDownstreamInformation(_ int, _ RestResponseSpec, _ *ServiceMeta) error {
+func (m *informationErrDownstreamMapper) ToDownstreamInformation(_ int, _ any, _ *ServiceMeta) error {
 	return errors.New("downstream information error")
 }
 
@@ -74,7 +74,7 @@ type redirectionErrDownstreamMapper struct {
 	DefaultRestDownstreamMapper[testResponse]
 }
 
-func (m *redirectionErrDownstreamMapper) ToDownstreamRedirection(_ int, _ RestResponseSpec, _ *ServiceMeta) error {
+func (m *redirectionErrDownstreamMapper) ToDownstreamRedirection(_ int, _ any, _ *ServiceMeta) error {
 	return errors.New("downstream redirection error")
 }
 
@@ -82,7 +82,7 @@ type problemErrDownstreamMapper struct {
 	DefaultRestDownstreamMapper[testResponse]
 }
 
-func (m *problemErrDownstreamMapper) ToDownstreamProblem(_ int, _ RestResponseSpec, _ *ServiceMeta) error {
+func (m *problemErrDownstreamMapper) ToDownstreamProblem(_ int, _ any, _ *ServiceMeta) error {
 	return errors.New("downstream problem error")
 }
 
@@ -90,7 +90,7 @@ type postErrUpstreamMapper struct {
 	DefaultRestUpstreamMapper[testCreatePayload, testUpdatePayload]
 }
 
-func (m *postErrUpstreamMapper) ToUpstreamPost(_ testCreatePayload, _ Identifiers, _ *repcts.RestRequestSpec) error {
+func (m *postErrUpstreamMapper) ToUpstreamPost(_ testCreatePayload, _ Identifiers, _ *any) error {
 	return errors.New("upstream post error")
 }
 
@@ -98,7 +98,7 @@ type patchErrUpstreamMapper struct {
 	DefaultRestUpstreamMapper[testCreatePayload, testUpdatePayload]
 }
 
-func (m *patchErrUpstreamMapper) ToUpstreamPatch(_ testUpdatePayload, _ Identifiers, _ *repcts.RestRequestSpec) error {
+func (m *patchErrUpstreamMapper) ToUpstreamPatch(_ testUpdatePayload, _ Identifiers, _ *any) error {
 	return errors.New("upstream patch error")
 }
 
@@ -106,7 +106,7 @@ type putErrUpstreamMapper struct {
 	DefaultRestUpstreamMapper[testCreatePayload, testUpdatePayload]
 }
 
-func (m *putErrUpstreamMapper) ToUpstreamPut(_ testCreatePayload, _ Identifiers, _ *repcts.RestRequestSpec) error {
+func (m *putErrUpstreamMapper) ToUpstreamPut(_ testCreatePayload, _ Identifiers, _ *any) error {
 	return errors.New("upstream put error")
 }
 
@@ -142,6 +142,29 @@ func (r *errorRepository) Save(_ context.Context, _ repcts.RestRequest, _ *repct
 
 func (r *errorRepository) Delete(_ context.Context, _ types.RequestContext, _ *repcts.RestResponse) error {
 	return r.deleteErr
+}
+
+func (r *errorRepository) NewRequest(method repcts.RestMethod) (*repcts.RestRequest, error) {
+	req := &repcts.RestRequest{Context: types.RequestContext{}}
+	switch method {
+	case repcts.MethodCreate, repcts.MethodSave:
+		req.Data = &testCreatePayload{}
+	case repcts.MethodUpdate:
+		req.Data = &testUpdatePayload{}
+	default:
+		req.Data = &testCreatePayload{}
+	}
+	return req, nil
+}
+
+func (r *errorRepository) NewResponse() *repcts.RestResponse {
+	return &repcts.RestResponse{
+		Context:     types.ResponseContext{},
+		Information: &testResponse{},
+		Redirection: &testResponse{},
+		Problem:     &testResponse{},
+		Data:        &testResponse{},
+	}
 }
 
 // statusMockRepository returns a response with the configured status code and optional data.
@@ -184,6 +207,29 @@ func (m *statusMockRepository) Save(_ context.Context, _ repcts.RestRequest, res
 func (m *statusMockRepository) Delete(_ context.Context, _ types.RequestContext, response *repcts.RestResponse) error {
 	response.Context = types.ResponseContext{StatusCode: m.statusCode}
 	return nil
+}
+
+func (m *statusMockRepository) NewRequest(method repcts.RestMethod) (*repcts.RestRequest, error) {
+	req := &repcts.RestRequest{Context: types.RequestContext{}}
+	switch method {
+	case repcts.MethodCreate, repcts.MethodSave:
+		req.Data = &testCreatePayload{}
+	case repcts.MethodUpdate:
+		req.Data = &testUpdatePayload{}
+	default:
+		req.Data = &testCreatePayload{}
+	}
+	return req, nil
+}
+
+func (m *statusMockRepository) NewResponse() *repcts.RestResponse {
+	return &repcts.RestResponse{
+		Context:     types.ResponseContext{},
+		Information: &testResponse{},
+		Redirection: &testResponse{},
+		Problem:     &testResponse{},
+		Data:        &testResponse{},
+	}
 }
 
 func newSvcForLocal() (svccts.Service[testCreatePayload, testResponse, testUpdatePayload], error) {

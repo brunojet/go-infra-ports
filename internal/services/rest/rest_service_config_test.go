@@ -78,7 +78,7 @@ func TestNewRestServiceOptions_UnknownOptionPanics(t *testing.T) {
 			t.Fatal("expected panic for unknown option type")
 		}
 	}()
-	newRestServiceOptions[testCreatePayload, testResponse, testUpdatePayload]([]RestServiceOption{
+	newRestServiceOptions[testCreatePayload, *testResponse, testUpdatePayload]([]RestServiceOption{
 		unknownOption{},
 	})
 }

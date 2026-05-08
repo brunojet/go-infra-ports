@@ -20,13 +20,13 @@ func newNoOpMockClient(t *testing.T) *mocks.MockHttpClient {
 type registryStub struct{}
 
 func (registryStub) Merge(other RestRegistry) RestRegistry                           { return other }
-func (registryStub) ResolveRequest(RestRequestSpec, *[]byte) error                   { return nil }
+func (registryStub) ResolveRequest(RestDataSpec, *[]byte) error                      { return nil }
 func (registryStub) ResolveEnvelopeRequest(_ RestMethod, dataBody *[]byte) error     { return nil }
-func (registryStub) ResolveResponse(int, []byte, *RestResponseSpec) error            { return nil }
-func (registryStub) ResolveResponses(int, []byte, *[]RestResponseSpec) error         { return nil }
+func (registryStub) ResolveResponse(int, []byte, *RestDataSpec) error                { return nil }
+func (registryStub) ResolveResponses(int, []byte, *[]RestDataSpec) error             { return nil }
 func (registryStub) ResolveEnvelopeResponse(int, *[]byte, *types.ResponseMeta) error { return nil }
-func (registryStub) NewRequestSpec(_ RestMethod) (RestRequestSpec, error)            { return nil, nil }
-func (registryStub) ReleaseRequestSpec(RestRequestSpec)                              {}
+func (registryStub) NewRequestSpec(_ RestMethod) (RestDataSpec, error)               { return nil, nil }
+func (registryStub) ReleaseRequestSpec(RestDataSpec)                                 {}
 
 func validOpts(t *testing.T) []RepositoryOption {
 	t.Helper()
@@ -116,7 +116,7 @@ func TestWithPath_InstanceMethods_WithParams(t *testing.T) {
 }
 
 func TestWithPath_AllMethods_WithParams(t *testing.T) {
-	o := mustOpts(t, WithPath(AllCollectionMethods|AllInstanceMethods, "/resources/{id}"))
+	o := mustOpts(t, WithPath(allCollectionMethods|allInstanceMethods, "/resources/{id}"))
 	for _, m := range []RestMethod{MethodCreate, MethodList, MethodGet, MethodUpdate, MethodSave, MethodDelete} {
 		e := o.paths[m]
 		if e == nil || e.templateFmt != "/resources/%s" {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	repcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	repcts "github.com/brunojet/go-infra-ports/pkg/repositories"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
@@ -28,6 +28,14 @@ func (typeAliasRepo) Save(context.Context, repcts.RestRequest, *repcts.RestRespo
 }
 func (typeAliasRepo) Delete(context.Context, types.RequestContext, *repcts.RestResponse) error {
 	return nil
+}
+
+func (typeAliasRepo) NewRequest(method repcts.RestMethod) (*repcts.RestRequest, error) {
+	return &repcts.RestRequest{}, nil
+}
+
+func (typeAliasRepo) NewResponse() *repcts.RestResponse {
+	return &repcts.RestResponse{}
 }
 
 var _ RestRepository = typeAliasRepo{}

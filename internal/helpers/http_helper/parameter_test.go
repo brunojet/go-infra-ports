@@ -57,7 +57,7 @@ func TestApplyQueryParams(t *testing.T) {
 			if tt.rawURL != "" {
 				u, _ = url.Parse(tt.rawURL)
 			}
-			err := ApplyQueryParams(u, tt.input)
+			err := ApplyURLQueryParams(u, tt.input)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("expected %v, got %v", tt.wantErr, err)

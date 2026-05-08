@@ -3,36 +3,45 @@ package repositories
 
 import (
 	"github.com/brunojet/go-infra-ports/internal/repositories/rest"
+	"github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
 )
 
+// Method* are aliases for the repository REST method constants defined
+// in the internal REST package. They identify operations such as create,
+// list, get, update, save and delete and are used when registering
+// request/response specs with registries and repositories.
 const (
-	// DefaultStatusCode is the default key used by registry response mappings.
-	DefaultStatusCode = rest.DefaultStatusCode
+	MethodCreate = rest.MethodCreate
+	MethodList   = rest.MethodList
+	MethodGet    = rest.MethodGet
+	MethodUpdate = rest.MethodUpdate
+	MethodSave   = rest.MethodSave
+	MethodDelete = rest.MethodDelete
 )
 
 // RestRegistry aliases the public REST registry contract.
 type RestRegistry = rest.RestRegistry
 
 // RestRequestSpec aliases the request payload contract used by RestRegistry.
-type RestRequestSpec = rest.RestRequestSpec
+type RestRequestSpec = rest.RestDataSpec
 
 // RestResponseSpec aliases the response payload contract used by RestRegistry.
-type RestResponseSpec = rest.RestResponseSpec
+type RestResponseSpec = rest.RestDataSpec
 
 // RestEnvelopeSpec aliases the envelope payload contract used by RestRegistry.
 type RestEnvelopeSpec = rest.RestEnvelopeSpec
 
 // RestRequest aliases REST request DTO used by RestRepository ports.
-type RestRequest = rest.RestRequest
+type RestRequest = contracts.RestRequest
 
 // RestResponse aliases REST single response DTO used by RestRepository ports.
-type RestResponse = rest.RestResponse
+type RestResponse = contracts.RestResponse
 
 // RestResponses aliases REST list response DTO used by RestRepository ports.
-type RestResponses = rest.RestResponses
+type RestResponses = contracts.RestResponses
 
 // RestRepository aliases the outbound REST repository port contract.
-type RestRepository = rest.RestRepository
+type RestRepository = contracts.RestRepository
 
 // RegistryOption configures RestRegistry construction.
 type RegistryOption = rest.RegistryOption
@@ -51,39 +60,39 @@ func NewRestRegistry(options ...RegistryOption) RestRegistry {
 	return rest.NewRestRegistry(options...)
 }
 
-// WithRequest registers request specs for methods.
-func WithRequest(spec RestRequestSpec, methods rest.RestMethod) RegistryOption {
-	return rest.WithRequest(spec, methods)
+// WithRequestOf registers request specs for methods.
+func WithRequestOf[T any](methods rest.RestMethod) RegistryOption {
+	return rest.WithRequestOf[T](methods)
 }
 
 // WithRequestEnvelope registers request envelope specs for methods.
-func WithRequestEnvelope(spec RestRequestSpec, methods rest.RestMethod) RegistryOption {
-	return rest.WithRequestEnvelope(spec, methods)
+func WithRequestEnvelope(dataField string, methods rest.RestMethod) RegistryOption {
+	return rest.WithRequestEnvelope(dataField, methods)
 }
 
-// WithResponse registers 2xx response specs (or default status when empty).
-func WithResponse(spec RestResponseSpec, statusCodes ...int) RegistryOption {
-	return rest.WithResponse(spec, statusCodes...)
+// WithResponseOf registers 2xx response specs (or default status when empty).
+func WithResponseOf[T any](statusCodes ...int) RegistryOption {
+	return rest.WithResponseOf[T](statusCodes...)
 }
 
 // WithResponseEnvelope registers envelope specs for 2xx responses.
-func WithResponseEnvelope(spec RestEnvelopeSpec, statusCodes ...int) RegistryOption {
-	return rest.WithResponseEnvelope(spec, statusCodes...)
+func WithResponseEnvelope(dataField, metaField string, statusCodes ...int) RegistryOption {
+	return rest.WithResponseEnvelope(dataField, metaField, statusCodes...)
 }
 
-// WithInformation registers 1xx response specs.
-func WithInformation(spec RestResponseSpec, statusCodes ...int) RegistryOption {
-	return rest.WithInformation(spec, statusCodes...)
+// WithInformationOf registers 1xx response specs.
+func WithInformationOf[T any](statusCodes ...int) RegistryOption {
+	return rest.WithInformationOf[T](statusCodes...)
 }
 
-// WithRedirection registers 3xx response specs.
-func WithRedirection(spec RestResponseSpec, statusCodes ...int) RegistryOption {
-	return rest.WithRedirection(spec, statusCodes...)
+// WithRedirectionOf registers 3xx response specs.
+func WithRedirectionOf[T any](statusCodes ...int) RegistryOption {
+	return rest.WithRedirectionOf[T](statusCodes...)
 }
 
-// WithProblem registers 4xx and 5xx response specs.
-func WithProblem(spec RestResponseSpec, statusCodes ...int) RegistryOption {
-	return rest.WithProblem(spec, statusCodes...)
+// WithProblemOf registers 4xx and 5xx response specs.
+func WithProblemOf[T any](statusCodes ...int) RegistryOption {
+	return rest.WithProblemOf[T](statusCodes...)
 }
 
 // HttpClient is the outbound port contract for executing HTTP requests.

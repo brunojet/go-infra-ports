@@ -10,14 +10,9 @@ func TestRepositoryErrorSentinels_AreDistinct(t *testing.T) {
 	errs := []error{
 		errRepositoryMissingHttpClient,
 		errRepositoryMissingRegistry,
-		errRepositoryBaseURLEmpty,
-		errRepositoryPathInvalidChars,
-		errRepositoryPathInvalidStructure,
 		errRepositoryPathMethodNotConfigured,
 		errRepositoryRequestBodyNil,
 		errRepositoryNilHTTPResponse,
-		errRepositoryCollectionPathHasIDs,
-		errRepositoryInstancePathMissingID,
 	}
 	for i, a := range errs {
 		for j, b := range errs {
@@ -43,7 +38,6 @@ func TestRepositoryErrorWrappers_WrapOriginalError(t *testing.T) {
 		{"resolve envelope response", errRepositoryResolveEnvelopeResponse, "resolve envelope response"},
 		{"resolve response", errRepositoryResolveResponse, "resolve response"},
 		{"invalid basePath", errRepositoryInvalidBasePath, "invalid basePath"},
-		{"invalid path template", errRepositoryInvalidPathTemplate, "invalid path template"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -55,24 +49,6 @@ func TestRepositoryErrorWrappers_WrapOriginalError(t *testing.T) {
 				t.Fatalf("expected %q in error %q", tc.want, err.Error())
 			}
 		})
-	}
-}
-
-func TestRepositoryPathFormatErrors_WrapSentinels(t *testing.T) {
-	errChars := errRepositoryPathInvalidCharsf("/users/{id}?bad")
-	if !errors.Is(errChars, errRepositoryPathInvalidChars) {
-		t.Fatalf("expected errRepositoryPathInvalidChars sentinel, got: %v", errChars)
-	}
-	if !strings.Contains(errChars.Error(), "/users/{id}?bad") {
-		t.Fatalf("expected offending path in error message, got: %q", errChars.Error())
-	}
-
-	errStructure := errRepositoryPathInvalidStructuref("/users//id")
-	if !errors.Is(errStructure, errRepositoryPathInvalidStructure) {
-		t.Fatalf("expected errRepositoryPathInvalidStructure sentinel, got: %v", errStructure)
-	}
-	if !strings.Contains(errStructure.Error(), "/users//id") {
-		t.Fatalf("expected offending path in error message, got: %q", errStructure.Error())
 	}
 }
 

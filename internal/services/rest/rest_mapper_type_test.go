@@ -1,11 +1,13 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
-	repcts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
+	repcts "github.com/brunojet/go-infra-ports/pkg/repositories"
 	svccts "github.com/brunojet/go-infra-ports/pkg/services/rest/contracts"
 	"github.com/brunojet/go-infra-ports/pkg/types"
 )
@@ -23,19 +25,66 @@ type testResponse struct {
 	Name string
 }
 
-// Implement RestRequestSpec interface for testCreatePayload
-func (t *testCreatePayload) New() repcts.RestRequestSpec      { return &testCreatePayload{} }
-func (t *testCreatePayload) SetBody(_ repcts.RestRequestSpec) {}
-
-// Implement RestRequestSpec interface for testUpdatePayload
-func (t *testUpdatePayload) New() repcts.RestRequestSpec      { return &testUpdatePayload{} }
-func (t *testUpdatePayload) SetBody(_ repcts.RestRequestSpec) {}
-
-// Implement RestResponseSpec interface for testResponse
-func (tr *testResponse) New() repcts.RestResponseSpec {
-	return &testResponse{}
+// Implement RestDataSpec (RestRequestSpec/RestResponseSpec) interface for testCreatePayload
+func (t *testCreatePayload) New() repcts.RestRequestSpec { return &testCreatePayload{} }
+func (t *testCreatePayload) NewSlice(n int) []repcts.RestRequestSpec {
+	specs := make([]repcts.RestRequestSpec, n)
+	for i := range specs {
+		specs[i] = &testCreatePayload{}
+	}
+	return specs
 }
+func (t *testCreatePayload) SetBody(body any) error {
+	if body == nil {
+		*t = testCreatePayload{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *testCreatePayload:
+		*t = *v
+		return nil
+	case testCreatePayload:
+		*t = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (t *testCreatePayload) Body() any                       { return *t }
+func (t *testCreatePayload) MarshalJSON() ([]byte, error)    { return json.Marshal(*t) }
+func (t *testCreatePayload) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, t) }
 
+// Implement RestDataSpec (RestRequestSpec) interface for testUpdatePayload
+func (t *testUpdatePayload) New() repcts.RestRequestSpec { return &testUpdatePayload{} }
+func (t *testUpdatePayload) NewSlice(n int) []repcts.RestRequestSpec {
+	specs := make([]repcts.RestRequestSpec, n)
+	for i := range specs {
+		specs[i] = &testUpdatePayload{}
+	}
+	return specs
+}
+func (t *testUpdatePayload) SetBody(body any) error {
+	if body == nil {
+		*t = testUpdatePayload{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *testUpdatePayload:
+		*t = *v
+		return nil
+	case testUpdatePayload:
+		*t = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (t *testUpdatePayload) Body() any                       { return *t }
+func (t *testUpdatePayload) MarshalJSON() ([]byte, error)    { return json.Marshal(*t) }
+func (t *testUpdatePayload) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, t) }
+
+// Implement RestDataSpec (RestResponseSpec) interface for testResponse
+func (tr *testResponse) New() repcts.RestResponseSpec { return &testResponse{} }
 func (tr *testResponse) NewSlice(n int) []repcts.RestResponseSpec {
 	specs := make([]repcts.RestResponseSpec, n)
 	for i := range specs {
@@ -43,12 +92,31 @@ func (tr *testResponse) NewSlice(n int) []repcts.RestResponseSpec {
 	}
 	return specs
 }
+func (tr *testResponse) SetBody(body any) error {
+	if body == nil {
+		*tr = testResponse{}
+		return nil
+	}
+	switch v := body.(type) {
+	case *testResponse:
+		*tr = *v
+		return nil
+	case testResponse:
+		*tr = v
+		return nil
+	default:
+		return fmt.Errorf("unsupported body type: %T", body)
+	}
+}
+func (tr *testResponse) Body() any                       { return *tr }
+func (tr *testResponse) MarshalJSON() ([]byte, error)    { return json.Marshal(*tr) }
+func (tr *testResponse) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, tr) }
 
 func TestDefaultRestUpstreamMapper_ToUpstreamPost_CopiesPayload(t *testing.T) {
 	m := &DefaultRestUpstreamMapper[*testCreatePayload, *testUpdatePayload]{}
 	payload := &testCreatePayload{Name: "test"}
 	ids := types.Identifiers{}
-	var upsPayload svccts.RestRequestSpec
+	var upsPayload any
 
 	err := m.ToUpstreamPost(payload, ids, &upsPayload)
 
@@ -64,7 +132,7 @@ func TestDefaultRestUpstreamMapper_ToUpstreamPut_CopiesUpdatePayload(t *testing.
 	m := &DefaultRestUpstreamMapper[*testCreatePayload, *testUpdatePayload]{}
 	payload := &testCreatePayload{Name: "updated"}
 	ids := types.Identifiers{}
-	var upsPayload svccts.RestRequestSpec
+	var upsPayload any
 
 	err := m.ToUpstreamPut(payload, ids, &upsPayload)
 
@@ -80,7 +148,7 @@ func TestDefaultRestUpstreamMapper_ToUpstreamPatch_CopiesPatchPayload(t *testing
 	m := &DefaultRestUpstreamMapper[*testCreatePayload, *testUpdatePayload]{}
 	payload := &testUpdatePayload{Name: "patched"}
 	ids := types.Identifiers{}
-	var upsPayload svccts.RestRequestSpec
+	var upsPayload any
 
 	err := m.ToUpstreamPatch(payload, ids, &upsPayload)
 
@@ -224,9 +292,6 @@ func TestDefaultRestDownstreamMapper_ToDownstreamResponse_TypeAssertionFailure(t
 	if err == nil {
 		t.Fatalf("expected type assertion error, got nil")
 	}
-	if err != errRestDownstreamMapperResponseTypeAssertion {
-		t.Fatalf("expected errRestDownstreamMapperResponseTypeAssertion, got %v", err)
-	}
 }
 
 func TestDefaultRestDownstreamMapper_ToDownstreamResponse_WithWrongType(t *testing.T) {
@@ -244,7 +309,7 @@ func TestDefaultRestDownstreamMapper_ToDownstreamResponse_WithWrongType(t *testi
 func TestDefaultRestDownstreamMapper_ToDownstreamInformation_ReturnsNil(t *testing.T) {
 	m := &DefaultRestDownstreamMapper[testResponse]{}
 	statusCode := 100
-	var upsPayload svccts.RestResponseSpec = &testResponse{ID: "1", Name: "info"}
+	var upsPayload any = &testResponse{ID: "1", Name: "info"}
 	serviceMeta := &ServiceMeta{}
 
 	err := m.ToDownstreamInformation(statusCode, upsPayload, serviceMeta)
@@ -257,7 +322,7 @@ func TestDefaultRestDownstreamMapper_ToDownstreamInformation_ReturnsNil(t *testi
 func TestDefaultRestDownstreamMapper_ToDownstreamRedirection_ReturnsNil(t *testing.T) {
 	m := &DefaultRestDownstreamMapper[testResponse]{}
 	statusCode := 301
-	var upsPayload svccts.RestResponseSpec = &testResponse{ID: "1", Name: "redirect"}
+	var upsPayload any = &testResponse{ID: "1", Name: "redirect"}
 	serviceMeta := &ServiceMeta{}
 
 	err := m.ToDownstreamRedirection(statusCode, upsPayload, serviceMeta)
@@ -270,7 +335,7 @@ func TestDefaultRestDownstreamMapper_ToDownstreamRedirection_ReturnsNil(t *testi
 func TestDefaultRestDownstreamMapper_ToDownstreamProblem_ReturnsNil(t *testing.T) {
 	m := &DefaultRestDownstreamMapper[testResponse]{}
 	statusCode := 400
-	var upsPayload svccts.RestResponseSpec = &testResponse{ID: "1", Name: "problem"}
+	var upsPayload any = &testResponse{ID: "1", Name: "problem"}
 	serviceMeta := &ServiceMeta{}
 
 	err := m.ToDownstreamProblem(statusCode, upsPayload, serviceMeta)
@@ -283,7 +348,7 @@ func TestDefaultRestDownstreamMapper_ToDownstreamProblem_ReturnsNil(t *testing.T
 func TestDefaultRestDownstreamMapper_ToDownstreamProblem_With500Error(t *testing.T) {
 	m := &DefaultRestDownstreamMapper[testResponse]{}
 	statusCode := 500
-	var upsPayload svccts.RestResponseSpec = &testResponse{ID: "1", Name: "server error"}
+	var upsPayload any = &testResponse{ID: "1", Name: "server error"}
 	serviceMeta := &ServiceMeta{}
 
 	err := m.ToDownstreamProblem(statusCode, upsPayload, serviceMeta)

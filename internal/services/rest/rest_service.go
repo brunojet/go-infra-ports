@@ -2,6 +2,8 @@ package rest
 
 import (
 	"context"
+
+	"github.com/brunojet/go-infra-ports/internal/repositories/rest"
 )
 
 // restService implements Service[C, R, U] by mapping HTTP REST requests/responses through configurable mappers.
@@ -34,21 +36,30 @@ func (s *restService[C, R, U]) Create(ctx context.Context, request ServiceCreate
 	if response == nil {
 		return errRestServiceResponseNil
 	}
-	restReq := RestRequest{}
+	restReq, err := s.repo.NewRequest(rest.MethodCreate)
+	if err != nil {
+		return errRestServiceUpstreamMappingFailed("Create/NewRequest", err)
+	}
+	defer restReq.Release() // Ensure any resources held by the request are released after processing
 	if err := s.mapUpstreamContext(request.Context, &restReq.Context); err != nil {
 		return errRestServiceUpstreamMappingFailed("Create/Context", err)
 	}
-	if err := s.upstream.ToUpstreamPost(request.Body, request.Context.Identifiers, &restReq.Body); err != nil {
+	var upsBody any
+	if err := s.upstream.ToUpstreamPost(request.Body, request.Context.Identifiers, &upsBody); err != nil {
 		return errRestServiceUpstreamMappingFailed("Create", err)
 	}
-	var restResp RestResponse
-	if err := s.repo.Create(ctx, restReq, &restResp); err != nil {
+	if err := restReq.Data.SetBody(upsBody); err != nil {
+		return errRestServiceUpstreamMappingFailed("Create/SetBody", err)
+	}
+	restResp := s.repo.NewResponse()
+	defer restResp.Release()
+	if err := s.repo.Create(ctx, *restReq, restResp); err != nil {
 		return err
 	}
 	if err := s.mapDownstreamContext(restResp.Context, &response.Context); err != nil {
 		return err
 	}
-	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
+	return s.mapRestResponseToServiceResponse(*restResp, &response.Data, &response.Meta)
 }
 
 // List implements Service[C, R, U].List by fetching from repository and mapping response.
@@ -81,14 +92,15 @@ func (s *restService[C, R, U]) Get(ctx context.Context, reqCtx RequestContext, r
 	if err := s.mapUpstreamContext(reqCtx, &upsCtx); err != nil {
 		return errRestServiceUpstreamMappingFailed("Get/Context", err)
 	}
-	var restResp RestResponse
-	if err := s.repo.Get(ctx, upsCtx, &restResp); err != nil {
+	upsResp := s.repo.NewResponse()
+	defer upsResp.Release()
+	if err := s.repo.Get(ctx, upsCtx, upsResp); err != nil {
 		return err
 	}
-	if err := s.mapDownstreamContext(restResp.Context, &response.Context); err != nil {
+	if err := s.mapDownstreamContext(upsResp.Context, &response.Context); err != nil {
 		return err
 	}
-	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
+	return s.mapRestResponseToServiceResponse(*upsResp, &response.Data, &response.Meta)
 }
 
 // Update implements Service[C, R, U].Update by mapping update request through mappers.
@@ -97,21 +109,29 @@ func (s *restService[C, R, U]) Update(ctx context.Context, request ServiceUpdate
 	if response == nil {
 		return errRestServiceResponseNil
 	}
-	restReq := RestRequest{}
+	restReq, err := s.repo.NewRequest(rest.MethodUpdate)
+	if err != nil {
+		return errRestServiceUpstreamMappingFailed("Update/NewRequest", err)
+	}
 	if err := s.mapUpstreamContext(request.Context, &restReq.Context); err != nil {
 		return errRestServiceUpstreamMappingFailed("Update/Context", err)
 	}
-	if err := s.upstream.ToUpstreamPatch(request.Body, request.Context.Identifiers, &restReq.Body); err != nil {
+	var upsBody any
+	if err := s.upstream.ToUpstreamPatch(request.Body, request.Context.Identifiers, &upsBody); err != nil {
 		return errRestServiceUpstreamMappingFailed("Update", err)
 	}
-	var restResp RestResponse
-	if err := s.repo.Update(ctx, restReq, &restResp); err != nil {
+	if err := restReq.Data.SetBody(upsBody); err != nil {
+		return errRestServiceUpstreamMappingFailed("Update/SetBody", err)
+	}
+	upsResp := s.repo.NewResponse()
+	defer upsResp.Release()
+	if err := s.repo.Update(ctx, *restReq, upsResp); err != nil {
 		return err
 	}
-	if err := s.mapDownstreamContext(restResp.Context, &response.Context); err != nil {
+	if err := s.mapDownstreamContext(upsResp.Context, &response.Context); err != nil {
 		return err
 	}
-	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
+	return s.mapRestResponseToServiceResponse(*upsResp, &response.Data, &response.Meta)
 }
 
 // Save implements Service[C, R, U].Save by mapping the save request through mappers.
@@ -120,21 +140,30 @@ func (s *restService[C, R, U]) Save(ctx context.Context, request ServiceSave[C],
 	if response == nil {
 		return errRestServiceResponseNil
 	}
-	restReq := RestRequest{}
+	restReq, err := s.repo.NewRequest(rest.MethodSave)
+	if err != nil {
+		return errRestServiceUpstreamMappingFailed("Save/NewRequest", err)
+	}
+	defer restReq.Release()
 	if err := s.mapUpstreamContext(request.Context, &restReq.Context); err != nil {
 		return errRestServiceUpstreamMappingFailed("Save/Context", err)
 	}
-	if err := s.upstream.ToUpstreamPut(request.Body, request.Context.Identifiers, &restReq.Body); err != nil {
+	var upsBody any
+	if err := s.upstream.ToUpstreamPut(request.Body, request.Context.Identifiers, &upsBody); err != nil {
 		return errRestServiceUpstreamMappingFailed("Save", err)
 	}
-	var restResp RestResponse
-	if err := s.repo.Save(ctx, restReq, &restResp); err != nil {
+	if err := restReq.Data.SetBody(upsBody); err != nil {
+		return errRestServiceUpstreamMappingFailed("Save/SetBody", err)
+	}
+	upsResp := s.repo.NewResponse()
+	defer upsResp.Release()
+	if err := s.repo.Save(ctx, *restReq, upsResp); err != nil {
 		return err
 	}
-	if err := s.mapDownstreamContext(restResp.Context, &response.Context); err != nil {
+	if err := s.mapDownstreamContext(upsResp.Context, &response.Context); err != nil {
 		return err
 	}
-	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
+	return s.mapRestResponseToServiceResponse(*upsResp, &response.Data, &response.Meta)
 }
 
 // Delete implements Service[C, R, U].Delete by calling repository and mapping response.
@@ -147,12 +176,13 @@ func (s *restService[C, R, U]) Delete(ctx context.Context, reqCtx RequestContext
 	if err := s.mapUpstreamContext(reqCtx, &upsCtx); err != nil {
 		return errRestServiceUpstreamMappingFailed("Delete/Context", err)
 	}
-	var restResp RestResponse
-	if err := s.repo.Delete(ctx, upsCtx, &restResp); err != nil {
+	upsResp := s.repo.NewResponse()
+	defer upsResp.Release()
+	if err := s.repo.Delete(ctx, upsCtx, upsResp); err != nil {
 		return err
 	}
-	if err := s.mapDownstreamContext(restResp.Context, &response.Context); err != nil {
+	if err := s.mapDownstreamContext(upsResp.Context, &response.Context); err != nil {
 		return err
 	}
-	return s.mapRestResponseToServiceResponse(restResp, &response.Data, &response.Meta)
+	return s.mapRestResponseToServiceResponse(*upsResp, &response.Data, &response.Meta)
 }

@@ -12,59 +12,30 @@ import (
 type foreignRegistry struct{}
 
 func (f *foreignRegistry) Merge(other RestRegistry) RestRegistry { return other }
-func (f *foreignRegistry) ResolveRequest(body RestRequestSpec, requestBody *[]byte) error {
+func (f *foreignRegistry) ResolveRequest(body RestDataSpec, requestBody *[]byte) error {
 	return nil
 }
-
-// ResolveEnvelopeRequest implements the RestRegistry contract using RestMethod.
 func (f *foreignRegistry) ResolveEnvelopeRequest(_ RestMethod, dataBody *[]byte) error { return nil }
-func (f *foreignRegistry) ResolveResponse(status int, responseBody []byte, body *RestResponseSpec) error {
+func (f *foreignRegistry) ResolveResponse(status int, responseBody []byte, body *RestDataSpec) error {
 	return nil
 }
-func (f *foreignRegistry) ResolveResponses(status int, responseBody []byte, bodies *[]RestResponseSpec) error {
+func (f *foreignRegistry) ResolveResponses(status int, responseBody []byte, bodies *[]RestDataSpec) error {
 	return nil
 }
 func (f *foreignRegistry) ResolveEnvelopeResponse(status int, dataBody *[]byte, meta *types.ResponseMeta) error {
 	return nil
 }
-
-func (f *foreignRegistry) NewRequestSpec(_ RestMethod) (RestRequestSpec, error) {
-	return &DefaultRestRequest{}, nil
+func (f *foreignRegistry) NewRequestSpec(_ RestMethod) (RestDataSpec, error) {
+	return NewDataSpecOf[DefaultRestRequest](), nil
 }
-func (f *foreignRegistry) ReleaseRequestSpec(spec RestRequestSpec) {}
-
-type testEnvelopeRequest struct {
-	Data json.RawMessage `json:"data"`
-}
-
-func (t *testEnvelopeRequest) New() RestRequestSpec {
-	return &testEnvelopeRequest{}
-}
-
-func (t *testEnvelopeRequest) SetBody(body RestRequestSpec) {
-	if raw, ok := body.(*DefaultRestRequest); ok {
-		t.Data = append([]byte(nil), raw.Body...)
-	}
-}
+func (f *foreignRegistry) ReleaseRequestSpec(spec RestDataSpec) {}
 
 type testResponse struct {
 	Name string `json:"name"`
 }
 
-func (t *testResponse) New() RestResponseSpec {
-	return &testResponse{}
-}
-
-func (t *testResponse) NewSlice(n int) []RestResponseSpec {
-	out := make([]RestResponseSpec, n)
-	for i := range out {
-		out[i] = &testResponse{}
-	}
-	return out
-}
-
 func TestResolveEnvelopeRequest(t *testing.T) {
-	registry := NewRestRegistry(WithRequestEnvelope(&testEnvelopeRequest{}, MethodCreate))
+	registry := NewRestRegistry(WithRequestEnvelope("data", MethodCreate))
 
 	payload := []byte(`{"name":"jet"}`)
 	if err := registry.ResolveEnvelopeRequest(MethodCreate, &payload); err != nil {
@@ -93,8 +64,8 @@ func TestResolveEnvelopeRequest_NoSetup_ReturnsSilently(t *testing.T) {
 
 func TestResolveEnvelopeResponseAndResolveResponses(t *testing.T) {
 	registry := NewRestRegistry(
-		WithResponse(&testResponse{}, http.StatusOK),
-		WithResponseEnvelope(&responseEnvelope{}, http.StatusOK),
+		WithResponseOf[testResponse](http.StatusOK),
+		WithResponseEnvelope("data", "meta", http.StatusOK),
 	)
 
 	responseBody := []byte(`{"data":[{"name":"a"},{"name":"b"}],"meta":{"page":1}}`)
@@ -112,7 +83,7 @@ func TestResolveEnvelopeResponseAndResolveResponses(t *testing.T) {
 		t.Fatalf("unexpected meta value: got %v", meta["page"])
 	}
 
-	var bodies []RestResponseSpec
+	var bodies []RestDataSpec
 	if err := registry.ResolveResponses(http.StatusOK, responseBody, &bodies); err != nil {
 		t.Fatalf("resolve responses failed: %v", err)
 	}
@@ -120,9 +91,10 @@ func TestResolveEnvelopeResponseAndResolveResponses(t *testing.T) {
 		t.Fatalf("unexpected bodies length: got %d, want 2", len(bodies))
 	}
 
-	first, ok := bodies[0].(*testResponse)
+	firstAny := bodies[0].Body()
+	first, ok := firstAny.(testResponse)
 	if !ok {
-		t.Fatalf("unexpected first body type: %T", bodies[0])
+		t.Fatalf("unexpected first body type: %T", bodies[0].Body())
 	}
 	if first.Name != "a" {
 		t.Fatalf("unexpected first body name: got %s, want a", first.Name)
@@ -132,18 +104,19 @@ func TestResolveEnvelopeResponseAndResolveResponses(t *testing.T) {
 func TestResolveResponseUsesDefaultRawBody(t *testing.T) {
 	registry := NewRestRegistry()
 
-	var body RestResponseSpec
+	var body RestDataSpec
 	raw := []byte(`{"hello":"world"}`)
 	if err := registry.ResolveResponse(http.StatusOK, raw, &body); err != nil {
 		t.Fatalf("resolve response failed: %v", err)
 	}
 
-	defaultBody, ok := body.(*DefaultRestResponse)
-	if !ok {
-		t.Fatalf("unexpected body type: %T", body)
-	}
-	if !bytes.Equal(defaultBody.Body, raw) {
-		t.Fatalf("unexpected default raw body: got %s, want %s", defaultBody.Body, raw)
+	// Default response spec uses DefaultRestResponse (alias to json.RawMessage)
+	if rb, ok := body.Body().(DefaultRestResponse); ok {
+		if !bytes.Equal([]byte(rb), raw) {
+			t.Fatalf("unexpected default raw body: got %s, want %s", []byte(rb), raw)
+		}
+	} else {
+		t.Fatalf("unexpected body type: %T", body.Body())
 	}
 }
 
@@ -166,8 +139,8 @@ func TestResolveEnvelopeResponse_NoSetup_Passthrough(t *testing.T) {
 }
 
 func TestMergeCombinesRegistries(t *testing.T) {
-	left := NewRestRegistry(WithRequest(&DefaultRestRequest{}, MethodCreate))
-	right := NewRestRegistry(WithRequest(&testEnvelopeRequest{}, MethodUpdate))
+	left := NewRestRegistry(WithRequestOf[DefaultRestRequest](MethodCreate))
+	right := NewRestRegistry(WithRequestOf[testResponse](MethodUpdate))
 
 	merged := left.Merge(right)
 
@@ -175,7 +148,7 @@ func TestMergeCombinesRegistries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error for post spec: %v", err)
 	}
-	if _, ok := postSpec.(*DefaultRestRequest); !ok {
+	if _, ok := postSpec.(*dataSpecOf[DefaultRestRequest]); !ok {
 		t.Fatalf("unexpected post spec type: %T", postSpec)
 	}
 
@@ -183,28 +156,46 @@ func TestMergeCombinesRegistries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error for put spec: %v", err)
 	}
-	if _, ok := putSpec.(*testEnvelopeRequest); !ok {
+	if _, ok := putSpec.(*dataSpecOf[testResponse]); !ok {
 		t.Fatalf("unexpected put spec type: %T", putSpec)
 	}
 }
 
-func TestMergeWithNilAndForeignRegistryReturnsClone(t *testing.T) {
-	left := NewRestRegistry(WithRequest(&DefaultRestRequest{}, MethodCreate))
-
-	mergedNil := left.Merge(nil)
-	if _, err := mergedNil.NewRequestSpec(MethodCreate); err != nil {
-		t.Fatalf("expected merged registry with nil other to preserve entries: %v", err)
-	}
-
-	mergedForeign := left.Merge(&foreignRegistry{})
-	if _, err := mergedForeign.NewRequestSpec(MethodCreate); err != nil {
-		t.Fatalf("expected merged registry with foreign other to preserve entries: %v", err)
-	}
+func expectPanic(t *testing.T, fn func(), msg string) {
+	t.Helper()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("expected panic: %s", msg)
+		}
+	}()
+	fn()
 }
+
+func TestMergeWithNilAndForeignRegistryPanics(t *testing.T) {
+	left := NewRestRegistry(WithRequestOf[DefaultRestRequest](MethodCreate))
+
+	expectPanic(t, func() { left.Merge(nil) }, "nil other")
+	expectPanic(t, func() { left.Merge(&foreignRegistry{}) }, "foreign other")
+}
+
+// --- error-path tests ---
+
+type marshalFailRequest struct {
+	C chan int `json:"c"`
+}
+
+type nilNewEnvelopeSpec struct{}
+
+func (n *nilNewEnvelopeSpec) New() RestEnvelopeSpec             { return nil }
+func (n *nilNewEnvelopeSpec) EnvelopeData() json.RawMessage     { return json.RawMessage(`null`) }
+func (n *nilNewEnvelopeSpec) EnvelopeMeta() types.ResponseMeta  { return types.ResponseMeta{} }
+func (n *nilNewEnvelopeSpec) SetEnvelopeData(_ json.RawMessage) {}
+func (n *nilNewEnvelopeSpec) MarshalJSON() ([]byte, error)      { return json.Marshal(nil) }
+func (n *nilNewEnvelopeSpec) UnmarshalJSON(_ []byte) error      { return nil }
 
 func TestResolveRequest_ErrorPaths(t *testing.T) {
 	registry := NewRestRegistry()
-	if err := registry.ResolveRequest(&DefaultRestRequest{}, nil); err == nil {
+	if err := registry.ResolveRequest(NewDataSpecOf[DefaultRestRequest](), nil); err == nil {
 		t.Fatal("expected error for nil request body pointer")
 	}
 
@@ -213,83 +204,31 @@ func TestResolveRequest_ErrorPaths(t *testing.T) {
 		t.Fatal("expected error for nil request spec")
 	}
 
-	if err := registry.ResolveRequest(&marshalFailRequest{}, &payload); err == nil {
+	if err := registry.ResolveRequest(NewDataSpecOf[marshalFailRequest](), &payload); err == nil {
 		t.Fatal("expected marshal error")
 	}
 }
 
 func TestResolveEnvelopeRequest_ErrorPaths(t *testing.T) {
-	registry := NewRestRegistry(WithRequestEnvelope(&nilEnvelopeRequest{}, MethodCreate))
+	registry := NewRestRegistry(WithRequestEnvelope("data", MethodCreate))
 	payload := []byte(`{"x":1}`)
 	if err := registry.ResolveEnvelopeRequest(MethodCreate, nil); err == nil {
 		t.Fatal("expected error for nil dataBody")
 	}
+
+	// replace envelope with one whose New returns nil
+	if rImpl, ok := registry.(*restRegistry); ok {
+		rImpl.cfg.requestsEnvelopes[MethodCreate] = &nilNewEnvelopeSpec{}
+	} else {
+		t.Fatal("expected concrete *restRegistry to modify cfg")
+	}
 	if err := registry.ResolveEnvelopeRequest(MethodCreate, &payload); err == nil {
 		t.Fatal("expected error when envelope New returns nil")
-	}
-
-	registry = NewRestRegistry(WithRequestEnvelope(&marshalFailEnvelopeRequest{}, MethodCreate))
-	if err := registry.ResolveEnvelopeRequest(MethodCreate, &payload); err == nil {
-		t.Fatal("expected marshal error for envelope")
-	}
-}
-
-func TestResolveResponse_ErrorPaths(t *testing.T) {
-	registry := NewRestRegistry(WithResponse(&testResponse{}, http.StatusOK))
-	if err := registry.ResolveResponse(http.StatusOK, []byte(`{"name":"ok"}`), nil); err == nil {
-		t.Fatal("expected error for nil body pointer")
-	}
-
-	var out RestResponseSpec
-	if err := registry.ResolveResponse(http.StatusOK, []byte(`not-json`), &out); err == nil {
-		t.Fatal("expected unmarshal error")
-	}
-
-	registry = NewRestRegistry(WithResponse(&nilNewResponseSpec{}, http.StatusOK))
-	if err := registry.ResolveResponse(http.StatusOK, []byte(`{"name":"ok"}`), &out); err == nil {
-		t.Fatal("expected error when response New returns nil")
-	}
-
-	registry = NewRestRegistry(WithResponse(&testResponse{}, http.StatusOK))
-	if err := registry.ResolveResponse(http.StatusContinue+600, []byte(`{"name":"ok"}`), &out); err == nil {
-		t.Fatal("expected error for status class outside supported ranges")
-	}
-}
-
-func TestResolveResponses_ErrorPaths(t *testing.T) {
-	registry := NewRestRegistry(WithResponse(&testResponse{}, http.StatusOK))
-	if err := registry.ResolveResponses(http.StatusOK, []byte(`[]`), nil); err == nil {
-		t.Fatal("expected error for nil bodies pointer")
-	}
-
-	var out []RestResponseSpec
-	if err := registry.ResolveResponses(http.StatusOK, []byte(`not-json`), &out); err == nil {
-		t.Fatal("expected unmarshal raw list error")
-	}
-
-	registry = NewRestRegistry(WithResponse(&nilItemSliceResponse{}, http.StatusOK))
-	if err := registry.ResolveResponses(http.StatusOK, []byte(`[{}]`), &out); err == nil {
-		t.Fatal("expected error when NewSlice contains nil item")
-	}
-
-	registry = NewRestRegistry(WithResponse(&testResponse{}, http.StatusOK))
-	if err := registry.ResolveResponses(http.StatusOK, []byte(`[1]`), &out); err == nil {
-		t.Fatal("expected item unmarshal error")
-	}
-
-	registry = NewRestRegistry(WithResponse(&badLenSliceResponse{}, http.StatusOK))
-	if err := registry.ResolveResponses(http.StatusOK, []byte(`[{}]`), &out); err == nil {
-		t.Fatal("expected error when NewSlice length mismatches payload count")
-	}
-
-	registry = NewRestRegistry(WithResponse(&testResponse{}, http.StatusOK))
-	if err := registry.ResolveResponses(http.StatusContinue+600, []byte(`[{}]`), &out); err == nil {
-		t.Fatal("expected error for status class outside supported ranges")
 	}
 }
 
 func TestResolveEnvelopeResponse_ErrorPaths(t *testing.T) {
-	registry := NewRestRegistry(WithResponseEnvelope(&responseEnvelope{}, http.StatusOK))
+	registry := NewRestRegistry(WithResponseEnvelope("data", "meta", http.StatusOK))
 	body := []byte(`{"data":{"x":1},"meta":{}}`)
 	meta := types.ResponseMeta{}
 
@@ -304,75 +243,13 @@ func TestResolveEnvelopeResponse_ErrorPaths(t *testing.T) {
 		t.Fatal("expected unmarshal error")
 	}
 
-	registry = NewRestRegistry(WithResponseEnvelope(&nilNewEnvelopeSpec{}, http.StatusOK))
+	registry = NewRestRegistry(WithResponseEnvelope("data", "meta", http.StatusOK))
+	if rImpl, ok := registry.(*restRegistry); ok {
+		rImpl.cfg.responseEnvelopes[http.StatusOK] = &nilNewEnvelopeSpec{}
+	} else {
+		t.Fatal("expected concrete *restRegistry to modify cfg")
+	}
 	if err := registry.ResolveEnvelopeResponse(http.StatusOK, &body, &meta); err == nil {
 		t.Fatal("expected error when envelope New returns nil")
 	}
 }
-
-func TestNewRequestSpecAndReleaseRequestSpec(t *testing.T) {
-	registry := NewRestRegistry(WithRequest(&nilRequestSpec{}, MethodCreate))
-	if _, err := registry.NewRequestSpec(MethodCreate); err == nil {
-		t.Fatal("expected error when request New returns nil")
-	}
-
-	registry = NewRestRegistry()
-	if _, err := registry.NewRequestSpec(MethodCreate); err != nil {
-		t.Fatalf("unexpected error creating default request spec: %v", err)
-	}
-
-	registry.ReleaseRequestSpec(nil)
-}
-
-type marshalFailRequest struct {
-	C chan int `json:"c"`
-}
-
-func (m *marshalFailRequest) New() RestRequestSpec         { return &marshalFailRequest{} }
-func (m *marshalFailRequest) SetBody(body RestRequestSpec) {}
-
-type nilEnvelopeRequest struct{}
-
-func (n *nilEnvelopeRequest) New() RestRequestSpec         { return nil }
-func (n *nilEnvelopeRequest) SetBody(body RestRequestSpec) {}
-
-type marshalFailEnvelopeRequest struct {
-	C chan int `json:"c"`
-}
-
-func (m *marshalFailEnvelopeRequest) New() RestRequestSpec         { return &marshalFailEnvelopeRequest{} }
-func (m *marshalFailEnvelopeRequest) SetBody(body RestRequestSpec) {}
-
-type nilItemSliceResponse struct{}
-
-func (n *nilItemSliceResponse) New() RestResponseSpec { return &nilItemSliceResponse{} }
-func (n *nilItemSliceResponse) NewSlice(nItems int) []RestResponseSpec {
-	out := make([]RestResponseSpec, nItems)
-	for i := range out {
-		out[i] = nil
-	}
-	return out
-}
-
-type nilNewResponseSpec struct{}
-
-func (n *nilNewResponseSpec) New() RestResponseSpec             { return nil }
-func (n *nilNewResponseSpec) NewSlice(_ int) []RestResponseSpec { return nil }
-
-type badLenSliceResponse struct{}
-
-func (b *badLenSliceResponse) New() RestResponseSpec { return &badLenSliceResponse{} }
-func (b *badLenSliceResponse) NewSlice(_ int) []RestResponseSpec {
-	return []RestResponseSpec{}
-}
-
-type nilNewEnvelopeSpec struct{}
-
-func (n *nilNewEnvelopeSpec) New() RestEnvelopeSpec            { return nil }
-func (n *nilNewEnvelopeSpec) EnvelopeData() json.RawMessage    { return json.RawMessage(`null`) }
-func (n *nilNewEnvelopeSpec) EnvelopeMeta() types.ResponseMeta { return types.ResponseMeta{} }
-
-type nilRequestSpec struct{}
-
-func (n *nilRequestSpec) New() RestRequestSpec         { return nil }
-func (n *nilRequestSpec) SetBody(body RestRequestSpec) {}

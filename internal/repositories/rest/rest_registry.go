@@ -16,19 +16,16 @@ func NewRestRegistry(options ...RegistryOption) RestRegistry {
 }
 
 func (r *restRegistry) Merge(other RestRegistry) RestRegistry {
-	merged := &restRegistry{cfg: r.cloneConfig()}
-	if other == nil {
-		return merged
-	}
 	otherRegistry, ok := other.(*restRegistry)
 	if !ok || otherRegistry == nil {
-		return merged
+		panic("rest registry: Merge requires the same concrete *restRegistry type")
 	}
+	merged := &restRegistry{cfg: r.cloneConfig()}
 	mergeRegistryOptions(merged.cfg, otherRegistry.cfg)
 	return merged
 }
 
-func (r *restRegistry) ResolveRequest(body RestRequestSpec, requestBody *[]byte) error {
+func (r *restRegistry) ResolveRequest(body RestDataSpec, requestBody *[]byte) error {
 	if requestBody == nil {
 		return errRestResolveRequestBodyNil
 	}
@@ -50,11 +47,11 @@ func (r *restRegistry) ResolveEnvelopeRequest(restMethod RestMethod, dataBody *[
 	if envelope == nil {
 		return errRestResolveEnvelopeRequestSpecNewNil
 	}
-	envelope.SetBody(&DefaultRestRequest{Body: append([]byte(nil), (*dataBody)...)})
+	envelope.SetEnvelopeData(json.RawMessage(append([]byte(nil), (*dataBody)...)))
 	return marshalInto(dataBody, envelope, errRestResolveEnvelopeRequestMarshal)
 }
 
-func (r *restRegistry) ResolveResponse(status int, responseBody []byte, body *RestResponseSpec) error {
+func (r *restRegistry) ResolveResponse(status int, responseBody []byte, body *RestDataSpec) error {
 	if body == nil {
 		return errRestResolveResponseBodyNil
 	}
@@ -69,7 +66,7 @@ func (r *restRegistry) ResolveResponse(status int, responseBody []byte, body *Re
 	return nil
 }
 
-func (r *restRegistry) ResolveResponses(status int, responseBody []byte, bodies *[]RestResponseSpec) error {
+func (r *restRegistry) ResolveResponses(status int, responseBody []byte, bodies *[]RestDataSpec) error {
 	if bodies == nil {
 		return errRestResolveResponsesBodiesNil
 	}
@@ -122,7 +119,7 @@ func (r *restRegistry) ResolveEnvelopeResponse(status int, dataBody *[]byte, met
 	return nil
 }
 
-func (r *restRegistry) NewRequestSpec(method RestMethod) (RestRequestSpec, error) {
+func (r *restRegistry) NewRequestSpec(method RestMethod) (RestDataSpec, error) {
 	instance, err := r.newRequestSpec(method)
 	if err != nil {
 		return nil, err
@@ -130,6 +127,6 @@ func (r *restRegistry) NewRequestSpec(method RestMethod) (RestRequestSpec, error
 	return instance, nil
 }
 
-func (r *restRegistry) ReleaseRequestSpec(spec RestRequestSpec) {
+func (r *restRegistry) ReleaseRequestSpec(spec RestDataSpec) {
 	_ = spec
 }

@@ -6,8 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	restcontracts "github.com/brunojet/go-infra-ports/pkg/repositories/rest/contracts"
-	"github.com/brunojet/go-infra-ports/pkg/types"
+	restimpl "github.com/brunojet/go-infra-ports/internal/repositories/rest"
 )
 
 type testHttpClientStub struct{}
@@ -16,52 +15,13 @@ func (testHttpClientStub) Do(_ context.Context, _ *http.Request) (*http.Response
 	return nil, nil
 }
 
-type testRequestSpec struct {
-	Body json.RawMessage
+// test payload types used with V2 data specs.
+type testRequestPayload struct {
+	Body json.RawMessage `json:"body"`
 }
 
-func (t *testRequestSpec) New() restcontracts.RestRequestSpec {
-	return &testRequestSpec{}
-}
-
-func (t *testRequestSpec) SetBody(body restcontracts.RestRequestSpec) {}
-
-type testResponseSpec struct {
-	Body json.RawMessage
-}
-
-func (t *testResponseSpec) New() restcontracts.RestResponseSpec {
-	return &testResponseSpec{}
-}
-
-func (t *testResponseSpec) NewSlice(n int) []restcontracts.RestResponseSpec {
-	out := make([]restcontracts.RestResponseSpec, n)
-	for i := 0; i < n; i++ {
-		out[i] = &testResponseSpec{}
-	}
-	return out
-}
-
-func (t *testResponseSpec) UnmarshalJSON(data []byte) error {
-	t.Body = append([]byte(nil), data...)
-	return nil
-}
-
-type testEnvelopeSpec struct {
-	Data json.RawMessage
-	Meta types.ResponseMeta
-}
-
-func (t *testEnvelopeSpec) New() restcontracts.RestEnvelopeSpec {
-	return &testEnvelopeSpec{}
-}
-
-func (t *testEnvelopeSpec) EnvelopeData() json.RawMessage {
-	return t.Data
-}
-
-func (t *testEnvelopeSpec) EnvelopeMeta() types.ResponseMeta {
-	return t.Meta
+type testResponsePayload struct {
+	Body json.RawMessage `json:"body"`
 }
 
 func TestNewRestRegistry_ReturnsNonNil(t *testing.T) {
@@ -71,18 +31,15 @@ func TestNewRestRegistry_ReturnsNonNil(t *testing.T) {
 }
 
 func TestRegistryOptions_ReturnOptions(t *testing.T) {
-	req := &testRequestSpec{}
-	resp := &testResponseSpec{}
-	env := &testEnvelopeSpec{}
-
+	// register using V2 helpers and concrete payload types
 	opts := []RegistryOption{
-		WithRequest(req, restcontracts.MethodCreate),
-		WithRequestEnvelope(req, restcontracts.MethodCreate),
-		WithResponse(resp, http.StatusOK),
-		WithResponseEnvelope(env, http.StatusOK),
-		WithInformation(resp, http.StatusContinue),
-		WithRedirection(resp, http.StatusMovedPermanently),
-		WithProblem(resp, http.StatusBadRequest),
+		WithRequestOf[testRequestPayload](MethodCreate),
+		WithRequestEnvelope("data", MethodCreate),
+		WithResponseOf[testResponsePayload](http.StatusOK),
+		WithResponseEnvelope("data", "meta", http.StatusOK),
+		WithInformationOf[testResponsePayload](http.StatusContinue),
+		WithRedirectionOf[testResponsePayload](http.StatusMovedPermanently),
+		WithProblemOf[testResponsePayload](http.StatusBadRequest),
 	}
 
 	for i, opt := range opts {
@@ -93,12 +50,12 @@ func TestRegistryOptions_ReturnOptions(t *testing.T) {
 }
 
 func TestAliases_AreUsable(t *testing.T) {
-	request := RestRequest{Body: &testRequestSpec{}}
-	response := RestResponse{Data: &testResponseSpec{}}
-	responses := RestResponses{Data: []RestResponseSpec{&testResponseSpec{}}}
+	request := RestRequest{Data: restimpl.NewDataSpecOf[testRequestPayload]()}
+	response := RestResponse{Data: restimpl.NewDataSpecOf[testResponsePayload]()}
+	responses := RestResponses{Data: []restimpl.RestDataSpec{restimpl.NewDataSpecOf[testResponsePayload]()}}
 
-	if request.Body == nil {
-		t.Fatalf("expected request body alias to be usable")
+	if request.Data == nil {
+		t.Fatalf("expected request data alias to be usable")
 	}
 	if response.Data == nil {
 		t.Fatalf("expected response data alias to be usable")

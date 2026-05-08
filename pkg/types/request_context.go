@@ -20,6 +20,16 @@ type RequestContext struct {
 	Identifiers Identifiers // path params extracted and validated by the handler
 }
 
+// NewRequestContext returns an initialized RequestContext with empty
+// headers, query values and identifiers maps.
+func NewRequestContext() RequestContext {
+	return RequestContext{
+		Query:       url.Values{},
+		Headers:     http.Header{},
+		Identifiers: Identifiers{},
+	}
+}
+
 // ResponseContext carries transport metadata populated by adapters after execution.
 type ResponseContext struct {
 	// StatusCode is the HTTP status to emit when provided by a lower layer.
@@ -28,4 +38,13 @@ type ResponseContext struct {
 	Headers http.Header
 	// Meta carries additional response metadata.
 	Meta ResponseMeta
+}
+
+// NewResponseContext returns an initialized ResponseContext with empty
+// headers and meta map.
+func NewResponseContext() ResponseContext {
+	return ResponseContext{
+		Headers: http.Header{},
+		Meta:    ResponseMeta{},
+	}
 }

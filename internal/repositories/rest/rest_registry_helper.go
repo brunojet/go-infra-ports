@@ -6,16 +6,16 @@ import (
 )
 
 func mergeRegistryOptions(dst, src *registryOptions) {
-	maps.Copy(dst.Requests, src.Requests)
-	maps.Copy(dst.RequestsEnvelopes, src.RequestsEnvelopes)
-	maps.Copy(dst.Responses, src.Responses)
-	maps.Copy(dst.ResponseEnvelopes, src.ResponseEnvelopes)
-	maps.Copy(dst.Informations, src.Informations)
-	maps.Copy(dst.Redirections, src.Redirections)
-	maps.Copy(dst.Problems, src.Problems)
+	maps.Copy(dst.requests, src.requests)
+	maps.Copy(dst.requestsEnvelopes, src.requestsEnvelopes)
+	maps.Copy(dst.responses, src.responses)
+	maps.Copy(dst.responseEnvelopes, src.responseEnvelopes)
+	maps.Copy(dst.informations, src.informations)
+	maps.Copy(dst.redirections, src.redirections)
+	maps.Copy(dst.problems, src.problems)
 }
 
-func resolveResponseInstance(prototype RestResponseSpec) (RestResponseSpec, error) {
+func resolveResponseInstance(prototype RestDataSpec) (RestDataSpec, error) {
 	resolved := prototype.New()
 	if resolved == nil {
 		return nil, errRestResolveResponseSpecNewNil
@@ -23,7 +23,7 @@ func resolveResponseInstance(prototype RestResponseSpec) (RestResponseSpec, erro
 	return resolved, nil
 }
 
-func resolveResponseSlice(prototype RestResponseSpec, n int) ([]RestResponseSpec, error) {
+func resolveResponseSlice(prototype RestDataSpec, n int) ([]RestDataSpec, error) {
 	resolved := prototype.NewSlice(n)
 	if len(resolved) != n {
 		return nil, errRestResolveResponsesNewSliceLen(len(resolved), n)
@@ -31,11 +31,11 @@ func resolveResponseSlice(prototype RestResponseSpec, n int) ([]RestResponseSpec
 	return resolved, nil
 }
 
-func resolveResponseSpec(status int, source map[int]RestResponseSpec) RestResponseSpec {
+func resolveResponseSpec(status int, source map[int]RestDataSpec) RestDataSpec {
 	if spec, ok := source[status]; ok && spec != nil {
 		return spec
 	}
-	return source[DefaultStatusCode]
+	return source[defaultStatusCode]
 }
 
 func marshalInto(target *[]byte, value any, wrapErr func(error) error) error {

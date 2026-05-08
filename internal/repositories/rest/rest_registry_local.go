@@ -10,22 +10,22 @@ func (r *restRegistry) cloneConfig() *registryOptions {
 	return cloned
 }
 
-func (r *restRegistry) resolveResponseSpec(status int) (RestResponseSpec, error) {
+func (r *restRegistry) resolveResponseSpec(status int) (RestDataSpec, error) {
 	switch {
 	case status >= http.StatusContinue && status <= http.StatusContinue+99:
-		return resolveResponseSpec(status, r.cfg.Informations), nil
+		return resolveResponseSpec(status, r.cfg.informations), nil
 	case status >= http.StatusOK && status <= http.StatusOK+99:
-		return resolveResponseSpec(status, r.cfg.Responses), nil
+		return resolveResponseSpec(status, r.cfg.responses), nil
 	case status >= http.StatusMultipleChoices && status <= http.StatusMultipleChoices+99:
-		return resolveResponseSpec(status, r.cfg.Redirections), nil
+		return resolveResponseSpec(status, r.cfg.redirections), nil
 	case status >= http.StatusBadRequest && status <= http.StatusBadRequest+199:
-		return resolveResponseSpec(status, r.cfg.Problems), nil
+		return resolveResponseSpec(status, r.cfg.problems), nil
 	default:
 		return nil, errRestResolveResponseSpecNil
 	}
 }
 
-func (r *restRegistry) newResponseSpec(status int) (RestResponseSpec, error) {
+func (r *restRegistry) newResponseSpec(status int) (RestDataSpec, error) {
 	prototype, err := r.resolveResponseSpec(status)
 	if err != nil {
 		return nil, err
@@ -37,8 +37,8 @@ func (r *restRegistry) newResponseSpec(status int) (RestResponseSpec, error) {
 	return instance, nil
 }
 
-func (r *restRegistry) newRequestSpec(restMethod RestMethod) (RestRequestSpec, error) {
-	spec, ok := r.cfg.Requests[restMethod]
+func (r *restRegistry) newRequestSpec(restMethod RestMethod) (RestDataSpec, error) {
+	spec, ok := r.cfg.requests[restMethod]
 	if !ok {
 		return nil, errRestNewRequestSpecNotFound(restMethod)
 	}
@@ -49,18 +49,18 @@ func (r *restRegistry) newRequestSpec(restMethod RestMethod) (RestRequestSpec, e
 	return instance, nil
 }
 
-func (r *restRegistry) resolveRequestEnvelopeSpec(restMethod RestMethod) RestRequestSpec {
-	if spec, ok := r.cfg.RequestsEnvelopes[restMethod]; ok && spec != nil {
+func (r *restRegistry) resolveRequestEnvelopeSpec(restMethod RestMethod) RestEnvelopeSpec {
+	if spec, ok := r.cfg.requestsEnvelopes[restMethod]; ok && spec != nil {
 		return spec
 	}
 	return nil
 }
 
 func (r *restRegistry) resolveResponseEnvelopeSpec(status int) RestEnvelopeSpec {
-	if spec, ok := r.cfg.ResponseEnvelopes[status]; ok && spec != nil {
+	if spec, ok := r.cfg.responseEnvelopes[status]; ok && spec != nil {
 		return spec
 	}
-	if spec, ok := r.cfg.ResponseEnvelopes[DefaultStatusCode]; ok && spec != nil {
+	if spec, ok := r.cfg.responseEnvelopes[defaultStatusCode]; ok && spec != nil {
 		return spec
 	}
 	return nil

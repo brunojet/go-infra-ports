@@ -13,15 +13,15 @@ func TestCloneConfig_CreatesIndependentMaps(t *testing.T) {
 	// use non-default keys to verify independence
 	keyX := RestMethod(99)
 	keyY := RestMethod(100)
-	registry.cfg.Requests[keyX] = &DefaultRestRequest{}
+	registry.cfg.requests[keyX] = NewDataSpecOf[DefaultRestRequest]()
 
 	cloned := registry.cloneConfig()
-	if cloned.Requests[keyX] == nil {
+	if cloned.requests[keyX] == nil {
 		t.Fatal("expected cloned config to copy requests map")
 	}
 
-	cloned.Requests[keyY] = &DefaultRestRequest{}
-	if registry.cfg.Requests[keyY] != nil {
+	cloned.requests[keyY] = NewDataSpecOf[DefaultRestRequest]()
+	if registry.cfg.requests[keyY] != nil {
 		t.Fatal("expected cloned config map to be independent from source")
 	}
 }
@@ -30,10 +30,10 @@ func TestCloneConfig_CreatesIndependentMaps(t *testing.T) {
 
 func TestResolveResponseSpec_ByStatusClass(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.Informations[http.StatusContinue] = &testResponse{}
-	registry.cfg.Redirections[http.StatusMovedPermanently] = &testResponse{}
-	registry.cfg.Problems[http.StatusBadRequest] = &testResponse{}
-	registry.cfg.Responses[http.StatusOK] = &testResponse{}
+	registry.cfg.informations[http.StatusContinue] = NewDataSpecOf[testResponse]()
+	registry.cfg.redirections[http.StatusMovedPermanently] = NewDataSpecOf[testResponse]()
+	registry.cfg.problems[http.StatusBadRequest] = NewDataSpecOf[testResponse]()
+	registry.cfg.responses[http.StatusOK] = NewDataSpecOf[testResponse]()
 
 	cases := []struct {
 		status int
@@ -49,15 +49,15 @@ func TestResolveResponseSpec_ByStatusClass(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error for %s (status %d): %v", tc.label, tc.status, err)
 		}
-		if _, ok := spec.(*testResponse); !ok {
-			t.Fatalf("expected testResponse for %s (status %d), got %T", tc.label, tc.status, spec)
+		if _, ok := spec.(*dataSpecOf[testResponse]); !ok {
+			t.Fatalf("expected testResponse dataSpec for %s (status %d), got %T", tc.label, tc.status, spec)
 		}
 	}
 }
 
 func TestResolveResponseSpec_ReturnsErrorWhenNil(t *testing.T) {
 	registry := &restRegistry{cfg: &registryOptions{
-		Responses: map[int]RestResponseSpec{},
+		responses: map[int]RestDataSpec{},
 	}}
 	_, err := registry.resolveResponseSpec(http.StatusContinue + 600)
 	if err == nil {
@@ -67,15 +67,19 @@ func TestResolveResponseSpec_ReturnsErrorWhenNil(t *testing.T) {
 
 // --- resolveRequestSpec ---
 
+type testLocalRequest struct {
+	Body json.RawMessage
+}
+
 func TestResolveRequestSpec_Hit(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.Requests[MethodCreate] = &testLocalRequest{}
+	registry.cfg.requests[MethodCreate] = NewDataSpecOf[testLocalRequest]()
 
 	resolved, err := registry.newRequestSpec(MethodCreate)
 	if err != nil {
 		t.Fatalf("unexpected error for direct hit: %v", err)
 	}
-	if _, ok := resolved.(*testLocalRequest); !ok {
+	if _, ok := resolved.(*dataSpecOf[testLocalRequest]); !ok {
 		t.Fatalf("expected testLocalRequest for direct hit, got %T", resolved)
 	}
 }
@@ -87,7 +91,7 @@ func TestResolveRequestSpec_FallbackToDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error for fallback: %v", err)
 	}
-	if _, ok := resolved.(*DefaultRestRequest); !ok {
+	if _, ok := resolved.(*dataSpecOf[DefaultRestRequest]); !ok {
 		t.Fatalf("expected DefaultRestRequest fallback, got %T", resolved)
 	}
 }
@@ -96,21 +100,11 @@ func TestResolveRequestSpec_FallbackToDefault(t *testing.T) {
 
 func TestResolveRequestEnvelopeSpec_Hit(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.RequestsEnvelopes[MethodCreate] = &testLocalRequest{}
+	registry.cfg.requestsEnvelopes[MethodCreate] = NewEnvelopeSpec("data", "")
 
 	resolved := registry.resolveRequestEnvelopeSpec(MethodCreate)
-	if _, ok := resolved.(*testLocalRequest); !ok {
-		t.Fatalf("expected testLocalRequest for direct hit, got %T", resolved)
-	}
-}
-
-func TestResolveRequestEnvelopeSpec_FallbackToDefault(t *testing.T) {
-	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.RequestsEnvelopes[MethodCreate] = &testLocalRequest{}
-
-	resolved := registry.resolveRequestEnvelopeSpec(MethodCreate)
-	if _, ok := resolved.(*testLocalRequest); !ok {
-		t.Fatalf("expected testLocalRequest via MethodCreate fallback, got %T", resolved)
+	if _, ok := resolved.(*envelopeSpecOf); !ok {
+		t.Fatalf("expected envelopeSpecOf for direct hit, got %T", resolved)
 	}
 }
 
@@ -127,7 +121,7 @@ func TestResolveRequestEnvelopeSpec_ReturnsNilWhenUnconfigured(t *testing.T) {
 
 func TestResolveResponseEnvelopeSpec_Hit(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.ResponseEnvelopes[http.StatusOK] = &responseEnvelope{}
+	registry.cfg.responseEnvelopes[http.StatusOK] = NewEnvelopeSpec("data", "meta")
 
 	resolved := registry.resolveResponseEnvelopeSpec(http.StatusOK)
 	if resolved == nil {
@@ -137,7 +131,7 @@ func TestResolveResponseEnvelopeSpec_Hit(t *testing.T) {
 
 func TestResolveResponseEnvelopeSpec_FallbackToDefault(t *testing.T) {
 	registry := &restRegistry{cfg: newRegistryOptions()}
-	registry.cfg.ResponseEnvelopes[DefaultStatusCode] = &responseEnvelope{}
+	registry.cfg.responseEnvelopes[defaultStatusCode] = NewEnvelopeSpec("data", "meta")
 
 	resolved := registry.resolveResponseEnvelopeSpec(http.StatusOK)
 	if resolved == nil {
@@ -151,18 +145,5 @@ func TestResolveResponseEnvelopeSpec_ReturnsNilWhenUnconfigured(t *testing.T) {
 	resolved := registry.resolveResponseEnvelopeSpec(http.StatusOK)
 	if resolved != nil {
 		t.Fatalf("expected nil when unconfigured, got %T", resolved)
-	}
-}
-
-// --- test helpers ---
-
-type testLocalRequest struct {
-	Body json.RawMessage
-}
-
-func (r *testLocalRequest) New() RestRequestSpec { return &testLocalRequest{} }
-func (r *testLocalRequest) SetBody(b RestRequestSpec) {
-	if raw, ok := b.(*DefaultRestRequest); ok {
-		r.Body = append([]byte(nil), raw.Body...)
 	}
 }

@@ -12,7 +12,7 @@ const (
 	status4xx  = http.StatusBadRequest
 )
 
-type restNon2xxMapper func(statusCode int, upsPayload RestResponseSpec, serviceMeta *ServiceMeta) error
+type restNon2xxMapper func(statusCode int, upsPayload any, serviceMeta *ServiceMeta) error
 
 func (s *restService[C, R, U]) mapUpstreamContext(reqCtx RequestContext, upsCtx *RequestContext) error {
 	if upsCtx == nil {
@@ -108,21 +108,21 @@ func (s *restService[C, R, U]) mapNon2xxResponse(statusCode int, payload RestRes
 // It handles 2xx (data), 3xx (redirection), 1xx (information), and 4xx/5xx (problem) responses.
 //
 //nolint:gocritic // Value parameter is intentional; caller owns a local copy and no mutation is needed.
-func (s *restService[C, R, U]) mapRestResponseToServiceResponse(restResp RestResponse, data *R, meta *ServiceMeta) error {
-	statusCode := restResp.Context.StatusCode
+func (s *restService[C, R, U]) mapRestResponseToServiceResponse(upsResp RestResponse, data *R, meta *ServiceMeta) error {
+	statusCode := upsResp.Context.StatusCode
 	if statusCode == http.StatusNoContent {
 		return nil
 	}
 	if statusCode >= statusOK && statusCode <= statusOK+99 {
-		if restResp.Data == nil {
+		if upsResp.Data == nil {
 			return errRestServiceNilResponseData
 		}
-		if err := s.downstream.ToDownstreamResponse(restResp.Data, data); err != nil {
+		if err := s.downstream.ToDownstreamResponse(upsResp.Data.Body(), data); err != nil {
 			return errRestServiceDownstreamMappingFailed("ToDownstreamResponse", err)
 		}
 		return nil
 	}
-	payload, err := non2xxPayload(statusCode, restResp)
+	payload, err := non2xxPayload(statusCode, upsResp)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,10 @@ func (s *restService[C, R, U]) mapRestResponsesToServiceResponses(restResp RestR
 		}
 		*data = make([]R, len(restResp.Data))
 		for i, restSpec := range restResp.Data {
-			if err := s.downstream.ToDownstreamResponse(restSpec, &(*data)[i]); err != nil {
+			if restSpec == nil {
+				return errRestServiceNilResponseData
+			}
+			if err := s.downstream.ToDownstreamResponse(restSpec.Body(), &(*data)[i]); err != nil {
 				return errRestServiceDownstreamMappingFailed("ToDownstreamResponse[slice]", err)
 			}
 		}
